@@ -137,6 +137,7 @@ total_time_entity: sensor.skycooker_total_time
 status_entity: sensor.skycooker_status
 current_mode_entity: sensor.skycooker_current_mode
 mode_entity: select.skycooker_mode
+favorite_modes_entity: select.skycooker_favorite_modes
 additional_mode_entity: select.skycooker_additional_mode
 cooking_time_hours_entity: select.skycooker_cooking_time_hours
 cooking_time_minutes_entity: select.skycooker_cooking_time_minutes
