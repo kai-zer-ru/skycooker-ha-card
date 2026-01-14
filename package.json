@@ -1,0 +1,41 @@
+{
+  "name": "skycooker-ha-card",
+  "version": "1.0ю0",
+  "description": "Пользовательская карточка для управления мультиваркой SkyCooker в Home Assistant",
+  "main": "dist/skycooker-ha-card-js",
+  "type": "module",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "scripts": {
+    "build": "rollup -c",
+    "dev": "rollup -c -w",
+    "lint": "eslint src/",
+    "prepare": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kai-zer-ru/skycooker-ha-card.git"
+  },
+  "author": "kai-zer-ru",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/kai-zer-ru/skycooker-ha-card/issues"
+  },
+  "homepage": "https://github.com/kai-zer-ru/skycooker-ha-card#readme",
+  "dependencies": {
+    "home-assistant-js-websocket": "^9.0.0",
+    "lit": "^2.0.0"
+  },
+  "devDependencies": {
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^15.0.0",
+    "@rollup/plugin-typescript": "^11.0.0",
+    "@typescript-eslint/eslint-plugin": "^8.52.0",
+    "@typescript-eslint/parser": "^8.52.0",
+    "eslint": "^8.57.1",
+    "rollup": "^4.0.0",
+    "tslib": "^2.8.1",
+    "typescript": "^5.0.0"
+  }
+}

@@ -1,0 +1,13 @@
+.roo
+alarmo-card
+node_modules
+package-lock.json
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+.DS_Store
+.idea
+.vscode
+dist/skycooker-card.js
