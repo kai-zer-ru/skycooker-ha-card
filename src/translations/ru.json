@@ -28,13 +28,14 @@
  "minutes": "м",
  "name": "Заголовок",
  "icon": "Иконка",
- "mode": "Режим готовки",
+ "mode": "Программа приготовления",
  "additional_mode": "Подпрограмма",
  "cooking_time_hours": "Время приготовления (часы)",
  "cooking_time_minutes": "Время приготовления (минуты)",
  "delayed_start_hours": "Время отложенного старта (часы)",
  "delayed_start_minutes": "Время отложенного старта (минуты)",
  "temperature": "Температура",
+ "cooking_temperature": "Температура приготовления",
  "remaining_time": "Оставшееся время",
  "status": "Статус",
  "current_mode": "Текущий режим",
@@ -51,7 +52,7 @@
  "switches": "Переключатели",
  "selects": "Выпадающие списки",
  "buttons": "Кнопки",
- "use_new_design": "Новый внешний вид",
  "favorite_modes": "Избранные режимы",
- "all_modes": "Все режимы"
+ "all_modes": "Все режимы",
+ "standby_mode": "Режим ожидания"
 }

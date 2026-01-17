@@ -35,6 +35,7 @@
  "delayed_start_hours": "Delayed Start (hours)",
  "delayed_start_minutes": "Delayed Start (minutes)",
  "temperature": "Temperature",
+ "cooking_temperature": "Cooking Temperature",
  "remaining_time": "Remaining Time",
  "status": "Status",
  "current_mode": "Current Mode",
@@ -51,7 +52,7 @@
  "switches": "Switches",
  "selects": "Selects",
  "buttons": "Buttons",
- "use_new_design": "Use New Design",
  "favorite_modes": "Favorite Modes",
- "all_modes": "All Modes"
+ "all_modes": "All Modes",
+ "standby_mode": "Standby Mode"
 }

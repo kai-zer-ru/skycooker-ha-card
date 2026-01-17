@@ -63,6 +63,7 @@ export class SkyCookerHaCard extends SubscribeMixin {
       stop_entity: '',
       start_delayed_entity: '',
       temperature_entity: '',
+      cooking_temperature_entity: '',
       remaining_time_entity: '',
       cooking_time_entity: '',
       status_entity: '',
@@ -96,6 +97,7 @@ export class SkyCookerHaCard extends SubscribeMixin {
       stop_entity: config.stop_entity !== undefined ? config.stop_entity : '',
       start_delayed_entity: config.start_delayed_entity !== undefined ? config.start_delayed_entity : '',
       temperature_entity: config.temperature_entity !== undefined ? config.temperature_entity : '',
+      cooking_temperature_entity: config.cooking_temperature_entity !== undefined ? config.cooking_temperature_entity : '',
       remaining_time_entity: config.remaining_time_entity !== undefined ? config.remaining_time_entity : '',
       cooking_time_entity: config.cooking_time_entity !== undefined ? config.cooking_time_entity : '',
       status_entity: config.status_entity !== undefined ? config.status_entity : '',
@@ -150,6 +152,7 @@ export class SkyCookerHaCard extends SubscribeMixin {
       this._config.start_entity,
       this._config.stop_entity,
       this._config.start_delayed_entity,
+      this._config.cooking_temperature_entity,
       this._config.temperature_entity,
       this._config.remaining_time_entity,
       this._config.cooking_time_entity,
@@ -171,16 +174,13 @@ export class SkyCookerHaCard extends SubscribeMixin {
   }
   
   private _handleStateChange(event: any): void {
-   console.log(`State changed for entity: ${event.data.entity_id}, new state: ${event.data.new_state.state}`);
-   
    // Обновляем интерфейс
    this.requestUpdate();
-    
+     
    // Проверяем, изменилось ли состояние сущности, связанной с кнопкой "Старт"
    if (this._config?.start_entity && event.data.entity_id === this._config.start_entity) {
      // Сбрасываем состояние кнопки "Старт" при изменении состояния
      this._isStartButtonPressed = false;
-     console.log('Reset _isStartButtonPressed to false due to state change');
    }
   }
 
@@ -200,6 +200,7 @@ export class SkyCookerHaCard extends SubscribeMixin {
                        this._config.start_entity ||
                        this._config.stop_entity ||
                        this._config.start_delayed_entity ||
+                       this._config.cooking_temperature_entity ||
                        this._config.temperature_entity ||
                        this._config.remaining_time_entity ||
                        this._config.cooking_time_entity ||
@@ -233,17 +234,22 @@ export class SkyCookerHaCard extends SubscribeMixin {
      `;
    }
  
-   // Используем только новый дизайн
-   return this._renderNewDesign();
+   // Используем компактный дизайн
+   return this._renderDesign();
  }
 
 
- private _renderNewDesign(): TemplateResult {
-   // Получаем первую доступную сущность для отображения состояния
-   const firstEntity = this._config.mode_entity ||
-                      this._config.auto_warm_entity ||
-                      this._config.start_entity;
-   const firstEntityState = firstEntity ? this.hass?.states[firstEntity] : null;
+ private _renderDesign(): TemplateResult {
+  // Получаем первую доступную сущность для отображения состояния
+  const firstEntity = this._config.mode_entity ||
+                     this._config.cooking_temperature_entity ||
+                     this._config.temperature_entity ||
+                     this._config.auto_warm_entity ||
+                     this._config.start_entity;
+  const firstEntityState = firstEntity ? this.hass?.states[firstEntity] : null;
+ 
+  // Use cooking_temperature_entity if available, otherwise fall back to temperature_entity
+  const temperatureEntity = this._config.cooking_temperature_entity || this._config.temperature_entity;
 
    return html`
  <ha-card class="new-design">
@@ -272,8 +278,16 @@ export class SkyCookerHaCard extends SubscribeMixin {
             <ha-icon icon="mdi:thermometer" class="new-control-icon"></ha-icon>
             <div class="new-control-content">
               <div class="new-control-label">${this._t('temperature')}</div>
-              <div class="new-control-value">${this._getEntityState(this._config.temperature_entity)}°C</div>
+              <div class="new-control-value">${this._getEntityState(temperatureEntity)}°C</div>
             </div>
+          </div>
+        ` : ''}
+        
+        <!-- Debug: Always show temperature entity info -->
+        ${temperatureEntity ? html`
+          <div style="display: none;" id="main-temperature-debug">
+            Temperature entity configured: ${temperatureEntity}<br>
+            Current temperature state: ${this._getEntityState(temperatureEntity)}
           </div>
         ` : ''}
         
@@ -282,17 +296,17 @@ export class SkyCookerHaCard extends SubscribeMixin {
           <!-- First row for time sensors -->
           <div class="new-time-sensors-row">
             <div class="new-control-item">
-              <ha-icon icon="mdi:timer" class="new-control-icon"></ha-icon>
-              <div class="new-control-content">
-                <div class="new-control-label">${this._t('remaining')}</div>
+              <div class="new-control-label">${this._t('remaining')}</div>
+              <div class="new-control-icon-value">
+                <ha-icon icon="mdi:timer" class="new-control-icon"></ha-icon>
                 <div class="new-control-value">${this._getEntityState(this._config.remaining_time_entity)}</div>
               </div>
             </div>
             
             <div class="new-control-item">
-              <ha-icon icon="mdi:clock" class="new-control-icon"></ha-icon>
-              <div class="new-control-content">
-                <div class="new-control-label">${this._t('total_time')}</div>
+              <div class="new-control-label">${this._t('cooking_time_label')}</div>
+              <div class="new-control-icon-value">
+                <ha-icon icon="mdi:clock" class="new-control-icon"></ha-icon>
                 <div class="new-control-value">${this._getEntityState(this._config.cooking_time_entity)}</div>
               </div>
             </div>
@@ -303,9 +317,9 @@ export class SkyCookerHaCard extends SubscribeMixin {
             <!-- Auto Warm Time Sensor -->
             ${this._shouldShowAutoWarmTime() ? html`
               <div class="new-control-item">
-                <ha-icon icon="mdi:clock-start" class="new-control-icon"></ha-icon>
-                <div class="new-control-content">
-                  <div class="new-control-label">${this._t('auto_warm_time')}</div>
+                <div class="new-control-label">${this._t('auto_warm_time')}</div>
+                <div class="new-control-icon-value">
+                  <ha-icon icon="mdi:clock-start" class="new-control-icon"></ha-icon>
                   <div class="new-control-value">${this._getEntityState(this._config.auto_warm_time_entity)}</div>
                 </div>
               </div>
@@ -314,9 +328,9 @@ export class SkyCookerHaCard extends SubscribeMixin {
             <!-- Delayed Launch Time Sensor -->
             ${this._shouldShowDelayedLaunchTime() ? html`
               <div class="new-control-item">
-                <ha-icon icon="mdi:timer-sand" class="new-control-icon"></ha-icon>
-                <div class="new-control-content">
-                  <div class="new-control-label">${this._t('delayed_launch')}</div>
+                <div class="new-control-label">${this._t('delayed_launch')}</div>
+                <div class="new-control-icon-value">
+                  <ha-icon icon="mdi:timer-sand" class="new-control-icon"></ha-icon>
                   <div class="new-control-value">${this._getEntityState(this._config.delayed_launch_time_entity)}</div>
                 </div>
               </div>
@@ -435,7 +449,7 @@ export class SkyCookerHaCard extends SubscribeMixin {
        ` : ''}
        
        <!-- Temperature Select (hidden secondary option) -->
-       ${this._config.temperature_entity ? html`
+       ${this._config.cooking_temperature_entity || this._config.temperature_entity ? html`
          <div class="new-temperature-section">
            <div class="new-temperature-header">
              <ha-icon icon="mdi:thermometer"></ha-icon>
@@ -444,13 +458,22 @@ export class SkyCookerHaCard extends SubscribeMixin {
            <div class="new-temperature-select-container">
              <ha-select
                class="new-temperature-hidden-select"
-               .value=${this._getEntityState(this._config.temperature_entity)}
-               @selected=${(ev: any) => this._handleSelectChange(this._config.temperature_entity, ev)}
+               .value=${this._getEntityState(this._config.cooking_temperature_entity || this._config.temperature_entity)}
+               @selected=${(ev: any) => this._handleSelectChange(this._config.cooking_temperature_entity || this._config.temperature_entity, ev)}
                @closed=${(ev: any) => ev.stopPropagation()}
              >
-               ${this._getSelectOptions(this._config.temperature_entity)}
+               ${this._getTemperatureOptionsWithFallback()}
              </ha-select>
            </div>
+         </div>
+       ` : ''}
+       
+       <!-- Debug info for temperature select -->
+       ${this._config.cooking_temperature_entity || this._config.temperature_entity ? html`
+         <div style="display: none;" id="temperature-debug-info">
+           Temperature Entity: ${this._config.cooking_temperature_entity || this._config.temperature_entity}<br>
+           Current State: ${this._getEntityState(this._config.cooking_temperature_entity || this._config.temperature_entity)}<br>
+           Options Count: ${this._getSelectOptions(this._config.cooking_temperature_entity || this._config.temperature_entity).length}
          </div>
        ` : ''}
        
@@ -540,42 +563,142 @@ export class SkyCookerHaCard extends SubscribeMixin {
     return state;
   }
   
-  private _shouldShowTemperature(): boolean {
-    // Показывать температуру только если выбран режим "Мультиповар" и идёт процесс
-    const currentMode = this._getEntityState(this._config.current_mode_entity);
-    const status = this._getEntityState(this._config.status_entity);
+  private _getTemperatureOptionsWithFallback(): TemplateResult[] {
+   // Special method for temperature select with enhanced fallback logic
+   
+   // Use cooking_temperature_entity if available, otherwise fall back to temperature_entity
+   const temperatureEntity = this._config.cooking_temperature_entity || this._config.temperature_entity;
     
-    // Проверяем, что режим "Мультиповар" и статус указывает на активный процесс
-    return currentMode === 'Мультиповар' &&
-           (status === 'on' || status === 'heating' || status === 'delayed_start');
+   if (!temperatureEntity) {
+     return [];
+   }
+    
+   // Debug: Check if hass is available
+   if (!this.hass) {
+     return [];
+   }
+    
+   // Debug: Check if entity exists in hass
+   if (!this.hass.states[temperatureEntity]) {
+     return [];
+   }
+    
+   // Debug: Check entity state
+   const stateObj = this.hass.states[temperatureEntity];
+    
+   // Debug: Check if attributes exist
+   if (!stateObj.attributes) {
+     return [];
+   }
+    
+   // Debug: Check all possible attribute names for temperature options
+   const possibleAttributeNames = ['options', 'temperature_options', 'values', 'list', 'temperature_values', 'temperature_list', 'temp_options', 'temp_values'];
+    
+   // First try the standard method
+   const standardOptions = this._getSelectOptions(temperatureEntity);
+    
+   if (standardOptions && standardOptions.length > 0) {
+     return standardOptions;
+   }
+    
+   // If no options found, try to get state object directly
+   
+   // Use the stateObj we already have
+   
+   // Try different attribute names for temperature options (reuse the same array)
+   
+   for (const attrName of possibleAttributeNames) {
+     if (stateObj.attributes && stateObj.attributes[attrName]) {
+       let options = stateObj.attributes[attrName] as string[];
+        
+       // If options is not an array, try to convert it
+       if (!Array.isArray(options)) {
+         if (typeof options === 'object' && options !== null) {
+           options = Object.values(options) as string[];
+         } else if (typeof options === 'string') {
+           options = (options as string).split(',').map((item: string) => item.trim());
+         }
+       }
+        
+       // Filter out invalid options
+       const filteredOptions = options.filter(option =>
+         option !== 'unknown' && option !== '' && option !== null && option !== undefined
+       );
+        
+       if (filteredOptions.length > 0) {
+         return filteredOptions.map((option: string) => html`
+           <mwc-list-item value=${option}>${option}</mwc-list-item>
+         `);
+       }
+     }
+   }
+    
+  // Try to get temperature options from state object directly
+  if (stateObj.attributes) {
+    const allOptions: string[] = [];
+     
+    // Look for any attribute that might contain temperature values
+    for (const [key, value] of Object.entries(stateObj.attributes)) {
+      if (typeof value === 'string' && (value.includes('°C') || value.includes('C') || !isNaN(Number(value)))) {
+        allOptions.push(value);
+      } else if (Array.isArray(value)) {
+        const filtered = value.filter(item => typeof item === 'string' && item !== 'unknown' && item !== '');
+        allOptions.push(...filtered);
+      }
+    }
+     
+    if (allOptions.length > 0) {
+      return allOptions.map((option: string) => html`
+        <mwc-list-item value=${option}>${option}</mwc-list-item>
+      `);
+    }
   }
+    
+   // Return default temperature options as last resort
+   const defaultTemperatures = ['50', '60', '70', '80', '90', '100'];
+    
+   return defaultTemperatures.map((temp: string) => html`
+     <mwc-list-item value=${temp}>${temp}°C</mwc-list-item>
+   `);
+ }
+  
+  private _shouldShowTemperature(): boolean {
+   // Показывать температуру только если выбран режим "Мультиповар" и идёт процесс
+   const currentMode = this._getEntityState(this._config.current_mode_entity);
+   const status = this._getEntityState(this._config.status_entity);
+    
+   // Проверяем, что режим "Мультиповар" и статус указывает на активный процесс
+   const result = currentMode === 'Мультиповар' &&
+                 (status === 'on' || status === 'heating' || status === 'delayed_start');
+    
+   return result;
+ }
   
   private _calculateProgress(): number {
-    if (!this._config || !this.hass) return 100;
-    
-    const status = this._getEntityState(this._config.status_entity);
-    const remainingTime = this._getEntityState(this._config.remaining_time_entity);
-    const cookingTime = this._getEntityState(this._config.cooking_time_entity);
-    
-    // Проверяем статус - прогресс отображается только для "Разогрев" и "Готовка" (или "Warming" и "Cooking")
-    const validStatuses = ['Разогрев', 'Готовка', 'Warming', 'Cooking'];
-    if (!validStatuses.includes(status)) {
-      return 100; // Значение по умолчанию
-    }
-    
-    if (remainingTime === 'N/A' || cookingTime === 'N/A') return 100;
-    
-    const remaining = parseFloat(remainingTime);
-    const cooking = parseFloat(cookingTime);
-    if (isNaN(remaining) || isNaN(cooking) || cooking === 0) return 100;
-    
-    // Рассчитываем прогресс: (осталось / общее) * 100, шкала уменьшается
-    const progress = (remaining / cooking) * 100;
-    return Math.round(progress);
-  }
+   if (!this._config || !this.hass) return 100;
   
-   @state()
-   private _showProgress: boolean = true; // Флаг для управления отображением прогресса
+   const status = this._getEntityState(this._config.status_entity);
+   const remainingTime = this._getEntityState(this._config.remaining_time_entity);
+   const cookingTime = this._getEntityState(this._config.cooking_time_entity);
+  
+   // Проверяем статус - прогресс отображается только для "Разогрев" и "Готовка" (или "Warming" и "Cooking")
+   const validStatuses = ['Разогрев', 'Готовка', 'Warming', 'Cooking'];
+   if (!validStatuses.includes(status)) {
+     return 100; // Значение по умолчанию
+   }
+  
+   if (remainingTime === 'N/A' || cookingTime === 'N/A') return 100;
+  
+   const remaining = parseFloat(remainingTime);
+   const cooking = parseFloat(cookingTime);
+   if (isNaN(remaining) || isNaN(cooking) || cooking === 0) return 100;
+  
+   // Рассчитываем прогресс: (осталось / общее) * 100, шкала уменьшается
+   const progress = (remaining / cooking) * 100;
+   return Math.round(progress);
+ }
+  
+  private _showProgress: boolean = false; // Флаг для управления отображением прогресса
  
    private _shouldShowProgress(): boolean {
      // Показывать прогресс только для статусов "Разогрев" и "Готовка" (или "Warming" и "Cooking")
@@ -699,23 +822,48 @@ export class SkyCookerHaCard extends SubscribeMixin {
    return true;
   }
   
-  private _getSelectOptions(entityId: string): TemplateResult[] {
-    if (!entityId || !this.hass) return [];
+ private _getSelectOptions(entityId: string): TemplateResult[] {
+   if (!entityId || !this.hass) {
+     return [];
+   }
     
-    const stateObj = this.hass.states[entityId];
-    if (!stateObj || !stateObj.attributes || !stateObj.attributes.options) {
-      return [];
-    }
+   const stateObj = this.hass.states[entityId];
+   if (!stateObj) {
+     return [];
+   }
     
-    // Фильтруем 'unknown' из опций для режима готовки
-    const filteredOptions = stateObj.attributes.options.filter((option: string) =>
-      option !== 'unknown'
-    );
+   if (!stateObj.attributes) {
+     return [];
+   }
     
-    return filteredOptions.map((option: string) => html`
-      <mwc-list-item value=${option}>${option}</mwc-list-item>
-    `);
-  }
+   if (!stateObj.attributes.options) {
+     // Try to get options from other possible attributes for temperature entities
+     if (stateObj.attributes.temperature_options) {
+       stateObj.attributes.options = stateObj.attributes.temperature_options;
+     } else if (stateObj.attributes.values) {
+       stateObj.attributes.options = stateObj.attributes.values;
+     } else if (stateObj.attributes.list) {
+       stateObj.attributes.options = stateObj.attributes.list;
+     } else {
+       return [];
+     }
+   }
+    
+   // Фильтруем 'unknown' и режимы ожидания из опций для режима готовки
+   const filteredOptions = stateObj.attributes.options.filter((option: string) =>
+     option !== 'unknown' && option !== 'Нет' && option !== 'Режим ожидания' &&
+     option !== 'None' && option !== 'Standby Mode' && option !== ''
+   );
+    
+   // Ensure we have valid options
+   if (!filteredOptions || filteredOptions.length === 0) {
+     return [];
+   }
+    
+   return filteredOptions.map((option: string) => html`
+     <mwc-list-item value=${option}>${option}</mwc-list-item>
+   `);
+ }
   
   private _getModeButtons(entityId: string): TemplateResult[] {
     if (!entityId || !this.hass) return [];
@@ -847,9 +995,18 @@ export class SkyCookerHaCard extends SubscribeMixin {
     const favoriteModes = this._getFavoriteModes();
     if (favoriteModes.length === 0) return [];
     
+    // Фильтруем режимы ожидания из избранных режимов
+    const filteredFavoriteModes = favoriteModes.filter((option: string) =>
+      option !== 'Нет' && option !== 'Режим ожидания' &&
+      option !== 'None' && option !== 'Standby Mode' &&
+      option !== '' && option !== 'unknown'
+    );
+    
+    if (filteredFavoriteModes.length === 0) return [];
+    
     const currentValue = this._getEntityState(entityId);
     
-    return favoriteModes.map((option: string) => {
+    return filteredFavoriteModes.map((option: string) => {
       // Определяем иконку для каждого режима
       let icon = '';
       switch(option.toLowerCase()) {
@@ -1009,18 +1166,16 @@ export class SkyCookerHaCard extends SubscribeMixin {
 
   private _handleButtonPress(entityId: string): void {
     if (!this._config || !this.hass || !entityId) return;
-
-    console.log(`Button pressed: ${entityId}, current _isStartButtonPressed: ${this._isStartButtonPressed}`);
-
+  
     // Проверяем, является ли entityId сущностью для кнопки "Стоп"
     if (entityId === this._config.stop_entity) {
       // Устанавливаем пустую строку для select.skycooker_rmc_m40s_rezhim_gotovki
       const modeEntity = this._config.mode_entity;
       if (modeEntity) {
         // Убедимся, что устанавливаем пустую строку, а не 'unknown'
-        let optionToSet = '';
+        let optionToSet = this._t('standby_mode');
         if (this._getEntityState(modeEntity) === 'unknown') {
-          optionToSet = '';
+          optionToSet = this._t('standby_mode');
         }
         this.hass.callService('select', 'select_option', {
           entity_id: modeEntity,
@@ -1029,13 +1184,11 @@ export class SkyCookerHaCard extends SubscribeMixin {
       }
       // Сбрасываем состояние кнопки "Старт"
       this._isStartButtonPressed = false;
-      console.log('Reset _isStartButtonPressed to false');
-      
+        
       // Скрываем прогресс-бар при нажатии на кнопку "Стоп"
       this._showProgress = false;
-      console.log('Hide progress bar');
     }
-
+ 
     // Проверяем, является ли entityId сущностью для кнопки "Старт"
     if (entityId === this._config.start_entity) {
       // Проверяем состояние select.skycooker_rmc_m40s_vremia_otlozhennogo_starta_chasy
@@ -1064,10 +1217,9 @@ export class SkyCookerHaCard extends SubscribeMixin {
       }
       // Обновляем состояние кнопки "Старт"
       this._isStartButtonPressed = false;
-      console.log('Set _isStartButtonPressed to false');
       this.requestUpdate();
     }
-
+ 
     this.hass.callService('button', 'press', {
       entity_id: entityId
     });
@@ -1355,7 +1507,7 @@ export class SkyCookerHaCard extends SubscribeMixin {
       }
       
       .new-control-label {
-        font-size: 12px;
+        font-size: 15px;
         color: var(--secondary-text-color);
       }
       
@@ -1393,32 +1545,36 @@ export class SkyCookerHaCard extends SubscribeMixin {
       }
       
       .new-selected-mode {
-        font-size: 14px;
+        font-size: 15px;
         color: var(--secondary-text-color);
-        font-style: italic;
         text-align: center;
+        font-family: 'Arial', sans-serif;
+        font-weight: bold;
       }
-        
+          
       .selected-mode-text {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: bold;
         color: var(--primary-color);
         margin-left: 4px;
+        font-family: 'Arial', sans-serif;
       }
-        
+          
       .new-selected-time {
-        font-size: 14px;
+        font-size: 15px;
         color: var(--secondary-text-color);
-        font-style: italic;
         text-align: center;
         min-height: 20px; /* Reserve space to prevent layout shift */
+        font-family: 'Arial', sans-serif;
+        font-weight: bold;
       }
-        
+          
       .selected-time-text {
-        font-size: 14px;
+        font-size: 15px;
         font-weight: bold;
         color: var(--primary-color);
         margin-left: 4px;
+        font-family: 'Arial', sans-serif;
       }
       
       .new-mode-select {
@@ -1618,8 +1774,8 @@ export class SkyCookerHaCard extends SubscribeMixin {
       
       .new-section-header span {
         flex: 1;
-        font-size: 14px;
-        font-weight: bold;
+        font-size: 16px;
+        font-weight: 700;
       }
       
       .new-expand-icon {
@@ -1871,8 +2027,8 @@ export class SkyCookerHaCard extends SubscribeMixin {
       }
 
       .new-auto-warm-label {
-        font-size: 14px;
-        font-weight: bold;
+        font-size: 16px;
+        font-weight: 700;
         text-align: center;
       }
       
@@ -1900,8 +2056,8 @@ export class SkyCookerHaCard extends SubscribeMixin {
      }
 
      .new-temperature-label {
-       font-size: 14px;
-       font-weight: bold;
+       font-size: 16px;
+       font-weight: 700;
        text-align: center;
      }
 
@@ -1949,8 +2105,8 @@ export class SkyCookerHaCard extends SubscribeMixin {
      }
 
      .new-cooking-time-label {
-       font-size: 14px;
-       font-weight: bold;
+       font-size: 16px;
+       font-weight: 700;
        text-align: center;
      }
 
@@ -1991,8 +2147,8 @@ export class SkyCookerHaCard extends SubscribeMixin {
      }
 
      .new-delayed-start-label {
-       font-size: 14px;
-       font-weight: bold;
+       font-size: 16px;
+       font-weight: 700;
        text-align: center;
      }
 
@@ -2031,32 +2187,45 @@ export class SkyCookerHaCard extends SubscribeMixin {
           gap: 8px;
           width: 100%;
         }
-        
+         
         .new-time-sensors-row {
           display: flex;
           flex-wrap: wrap;
           gap: 12px;
           justify-content: center;
         }
-        
+         
         /* Single sensor - center it */
         .new-time-sensors-row:only-child {
           justify-content: center;
         }
-        
+         
         /* Two sensors - display in one row */
         .new-time-sensors-row:nth-child(1):only-child + .new-time-sensors-row {
           display: none; /* Hide second row if only one row exists */
         }
-        
+         
         /* Three sensors - first two in first row, third centered in second row */
         .new-time-sensors-row:nth-child(1):has(.new-control-item:nth-child(2)) + .new-time-sensors-row:has(.new-control-item:only-child) {
           justify-content: center;
         }
-        
+         
         /* Four sensors - two in each row */
         .new-time-sensors-row:nth-child(1):has(.new-control-item:nth-child(2)) + .new-time-sensors-row:has(.new-control-item:nth-child(2)) {
           justify-content: flex-start;
+        }
+         
+        .new-control-item {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 4px;
+        }
+         
+        .new-control-icon-value {
+          display: flex;
+          align-items: center;
+          gap: 8px;
         }
       `;
     }

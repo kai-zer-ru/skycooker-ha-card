@@ -1,7 +1,7 @@
 {
   "name": "skycooker-ha-card",
-  "version": "1.0ю0",
-  "description": "Пользовательская карточка для управления мультиваркой SkyCooker в Home Assistant",
+  "version": "1.1.0",
+  "description": "Пользовательская карточка для управления мультиваркой SkyCooker в Home Assistant (тестовая версия)",
   "main": "dist/skycooker-ha-card-js",
   "type": "module",
   "engines": {

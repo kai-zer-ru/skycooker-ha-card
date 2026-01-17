@@ -19,7 +19,6 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
       name: 'SkyCooker',
       icon: 'mdi:stove',
       language: 'ru',
-      use_new_design: false,
       mode_entity: '',
       additional_mode_entity: '',
       cooking_time_hours_entity: '',
@@ -31,6 +30,7 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
       stop_entity: '',
       start_delayed_entity: '',
       temperature_entity: '',
+      cooking_temperature_entity: '',
       remaining_time_entity: '',
       cooking_time_entity: '',
       status_entity: '',
@@ -153,21 +153,6 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
               }}"
             ></ha-textfield>
             
-            <!-- New Design Toggle -->
-            <ha-switch
-              .checked="${this._config.use_new_design || false}"
-              .label="${this._t('use_new_design')}"
-              @change="${(ev: any) => {
-                const newConfig = { ...this._config, use_new_design: ev.target.checked };
-                this._config = newConfig;
-                this.dispatchEvent(new CustomEvent('config-changed', {
-                  detail: { config: this._config },
-                  bubbles: true,
-                  composed: true,
-                }));
-                this.requestUpdate();
-              }}"
-            ></ha-switch>
           </div>
         </div>
 
@@ -455,6 +440,24 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                   ev.preventDefault();
                   const selectedValue = ev.target?.value || ev.detail?.value;
                   this._config = { ...this._config, favorite_modes_entity: selectedValue };
+                  this._dispatchConfigChanged();
+                }}"
+                @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
+              >
+                ${this._getEntityOptions('select')}
+              </ha-select>
+            </div>
+
+           <!-- Cooking Temperature Select -->
+            <div class="entity-item">
+              <label>${this._t('cooking_temperature')}</label>
+              <ha-select
+                .value="${this._config.cooking_temperature_entity || ''}"
+                @selected="${(ev: any) => {
+                  ev.stopPropagation();
+                  ev.preventDefault();
+                  const selectedValue = ev.target?.value || ev.detail?.value;
+                  this._config = { ...this._config, cooking_temperature_entity: selectedValue };
                   this._dispatchConfigChanged();
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
