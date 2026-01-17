@@ -234,11 +234,11 @@ var remaining = "Оставшееся время";
 var min = "мин";
 var cooking_time_progress = "Время приготовления";
 var delayed_start = "Отложенный старт";
-var auto_warm = "Авторазогрев";
+var auto_warm = "Автораподогрев";
 var start = "Старт";
 var stop = "Стоп";
-var start_delayed = "Старт с задержкой";
-var delayed_launch = "Отложенный запуск";
+var start_delayed = "Отложенный старт";
+var delayed_launch = "Отложенный старт";
 var select_mode = "Выбрать программу";
 var select_additional_mode = "Выбрать дополнительную программу";
 var select_temperature = "Температура";
@@ -249,7 +249,7 @@ var select_delayed_start_minutes = "Минуты отложенного стар
 var not_configured = "Не настроено";
 var please_configure = "Пожалуйста, настройте карточку в редакторе";
 var additional_settings = "Дополнительные настройки";
-var cooking_time_label = "Время приготовления";
+var cooking_time_label = "Общее время работы программы";
 var total_time = "Общее время";
 var hours = "ч";
 var minutes = "м";
@@ -709,17 +709,6 @@ let SkyCookerHaCard = class SkyCookerHaCard extends SubscribeMixin {
             ` : ''}
           </div>
         </div>
-        
-        <!-- Auto Warm Time Sensor moved to main controls -->
-        ${this._shouldShowAutoWarmTime() ? x `
-          <div class="new-control-item">
-            <ha-icon icon="mdi:clock-start" class="new-control-icon"></ha-icon>
-            <div class="new-control-content">
-              <div class="new-control-label">${this._t('auto_warm_time')}</div>
-              <div class="new-control-value">${this._getEntityState(this._config.auto_warm_time_entity)}</div>
-            </div>
-          </div>
-        ` : ''}
    </div>
    
    <!-- Action Buttons in compact layout -->

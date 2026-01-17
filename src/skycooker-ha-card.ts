@@ -379,17 +379,6 @@ export class SkyCookerHaCard extends SubscribeMixin {
             ` : ''}
           </div>
         </div>
-        
-        <!-- Auto Warm Time Sensor moved to main controls -->
-        ${this._shouldShowAutoWarmTime() ? html`
-          <div class="new-control-item">
-            <ha-icon icon="mdi:clock-start" class="new-control-icon"></ha-icon>
-            <div class="new-control-content">
-              <div class="new-control-label">${this._t('auto_warm_time')}</div>
-              <div class="new-control-value">${this._getEntityState(this._config.auto_warm_time_entity)}</div>
-            </div>
-          </div>
-        ` : ''}
    </div>
    
    <!-- Action Buttons in compact layout -->
