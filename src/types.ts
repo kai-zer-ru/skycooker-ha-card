@@ -1,3 +1,5 @@
+import type { SkycookerConfig } from './config';
+
 export interface HomeAssistant {
   states: Record<string, any>;
   localize: (key: string, ...args: any[]) => string;
@@ -9,6 +11,6 @@ export interface HomeAssistant {
 }
 
 export interface LovelaceCardEditor {
-  setConfig(config: any): void;
+  setConfig(config?: Partial<SkycookerConfig>): void;
   hass?: HomeAssistant;
 }

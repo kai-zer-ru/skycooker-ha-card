@@ -19,7 +19,10 @@ export function getTranslation(language: string, key: string): string {
   return result;
 }
 
-export function getLanguage(config?: any, hass?: HomeAssistant): string {
+export function getLanguage(
+  config?: { language?: string },
+  hass?: HomeAssistant
+): string {
   // Проверяем, задан ли язык в конфигурации карточки
   const configLanguage = config?.language;
   if (configLanguage) {

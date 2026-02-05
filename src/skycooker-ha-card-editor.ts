@@ -2,6 +2,12 @@ import { LitElement, html, TemplateResult, CSSResult, css } from 'lit';
 import { property, customElement, state } from 'lit/decorators.js';
 import { HomeAssistant, LovelaceCardEditor } from './types';
 import { getLanguage, getTranslation } from './localize';
+import {
+  type SkycookerConfig,
+  DEFAULT_CONFIG,
+  normalizeConfig,
+} from './config';
+import { autoFillEntitiesByDevice } from './entity-utils';
 
 @customElement('skycooker-ha-card-editor')
 export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEditor {
@@ -9,73 +15,55 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
   public hass?: HomeAssistant;
 
   @state()
-  private _config?: any;
+  private _config?: SkycookerConfig;
 
-  public setConfig(config?: any): void {
-    // Используем предоставленную конфигурацию напрямую без слияния с значениями по умолчанию
-    // Это сохраняет все выбранные значения сущностей
-    this._config = config ? { ...config } : {
-      type: 'custom:skycooker-ha-card',
-      name: 'SkyCooker',
-      icon: 'mdi:stove',
-      language: 'ru',
-      mode_entity: '',
-      additional_mode_entity: '',
-      cooking_time_hours_entity: '',
-      cooking_time_minutes_entity: '',
-      delayed_start_hours_entity: '',
-      delayed_start_minutes_entity: '',
-      auto_warm_entity: '',
-      start_entity: '',
-      stop_entity: '',
-      start_delayed_entity: '',
-      temperature_entity: '',
-      cooking_temperature_entity: '',
-      remaining_time_entity: '',
-      cooking_time_entity: '',
-      status_entity: '',
-      current_mode_entity: '',
-      current_additional_mode_entity: '',
-      auto_warm_time_entity: '',
-      delayed_launch_time_entity: '',
-      favorite_modes_entity: ''
-    };
+  public setConfig(config?: Partial<SkycookerConfig>): void {
+    this._config = config
+      ? { ...normalizeConfig(config, this.hass) }
+      : { ...DEFAULT_CONFIG, language: 'ru' };
   }
 
-  // Геттер для конфигурации, которую может читать Home Assistant
-  public getConfig(): any {
+  public getConfig(): SkycookerConfig | undefined {
     return this._config;
   }
 
   // Реализуем метод configUpdated для правильной обработки обновлений конфигурации
-  public configUpdated(config: any): void {
+  public configUpdated(config?: Partial<SkycookerConfig>): void {
     this.setConfig(config);
     this.requestUpdate();
   }
 
-  private _dispatchConfigChanged(): void {
-    const event = new CustomEvent('config-changed', {
-      detail: { config: this._config },
-      bubbles: true,
-      composed: true,
-    });
-    this.dispatchEvent(event);
+  private _updateConfig(updates: Partial<SkycookerConfig>): void {
+    if (!this._config) return;
+    this._config = { ...this._config, ...updates };
+    this.dispatchEvent(
+      new CustomEvent('config-changed', {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
     this.requestUpdate();
   }
 
-
-  private _getEntityLabel(entityId: string): string {
-    if (!entityId || !this.hass) return '';
-    return this.hass.states[entityId]?.attributes?.friendly_name || entityId;
-  }
+  private _handleAutoFill = (): void => {
+    const seed =
+      this._config?.mode_entity ||
+      this._config?.status_entity ||
+      this._config?.start_entity;
+    if (!seed || !this.hass) return;
+    const filled = autoFillEntitiesByDevice(this.hass, seed);
+    if (Object.keys(filled).length > 0) {
+      this._updateConfig(filled);
+    }
+  };
 
   private _getEntityOptions(domain: string): TemplateResult[] {
     if (!this.hass) return [];
 
-    const entities = Object.keys(this.hass.states).filter(entity_id =>
-      entity_id.startsWith(`${domain}.`) &&
-      entity_id.toLowerCase().includes('skycooker')
-    );
+    const entities = Object.keys(this.hass.states)
+      .filter((entity_id) => entity_id.startsWith(`${domain}.`))
+      .sort();
 
     // Добавляем опцию очистки в начало
     const options = [html`
@@ -119,38 +107,36 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
         <div class="section">
           <div class="section-header">
             <h3>${this._t('entities')}</h3>
+            <ha-button
+              .disabled=${!(
+                this._config.mode_entity ||
+                this._config.status_entity ||
+                this._config.start_entity
+              )}
+              @click=${this._handleAutoFill}
+            >
+              ${this._t('auto_fill')}
+            </ha-button>
           </div>
           <div class="grid">
             <!-- Name -->
             <ha-textfield
               .label="${this._t('name')}"
               .value="${this._config.name || 'SkyCooker'}"
-              @input="${(ev: Event) => {
-                const newConfig = { ...this._config, name: (ev.target as HTMLInputElement).value };
-                this._config = newConfig;
-                this.dispatchEvent(new CustomEvent('config-changed', {
-                  detail: { config: this._config },
-                  bubbles: true,
-                  composed: true,
-                }));
-                this.requestUpdate();
-              }}"
+              @input="${(ev: Event) =>
+                this._updateConfig({
+                  name: (ev.target as HTMLInputElement).value,
+                })}"
             ></ha-textfield>
 
             <!-- Icon -->
             <ha-textfield
               .label="${this._t('icon')}"
               .value="${this._config.icon || 'mdi:stove'}"
-              @input="${(ev: Event) => {
-                const newConfig = { ...this._config, icon: (ev.target as HTMLInputElement).value };
-                this._config = newConfig;
-                this.dispatchEvent(new CustomEvent('config-changed', {
-                  detail: { config: this._config },
-                  bubbles: true,
-                  composed: true,
-                }));
-                this.requestUpdate();
-              }}"
+              @input="${(ev: Event) =>
+                this._updateConfig({
+                  icon: (ev.target as HTMLInputElement).value,
+                })}"
             ></ha-textfield>
             
           </div>
@@ -170,11 +156,13 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, temperature_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ temperature_entity: v });
                 }}"
-                @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
+                @closed="${(ev: any) => {
+                  ev.stopPropagation();
+                  ev.preventDefault();
+                }}"
               >
                 ${this._getEntityOptions('sensor')}
               </ha-select>
@@ -188,9 +176,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, remaining_time_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ remaining_time_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -206,9 +193,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, cooking_time_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ cooking_time_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -224,9 +210,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, status_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ status_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -242,9 +227,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, current_mode_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ current_mode_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -260,9 +244,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, auto_warm_time_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ auto_warm_time_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -278,9 +261,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, delayed_launch_time_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ delayed_launch_time_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -304,9 +286,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, auto_warm_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ auto_warm_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -330,9 +311,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, mode_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ mode_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -348,9 +328,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, additional_mode_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ additional_mode_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -366,9 +345,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, cooking_time_hours_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ cooking_time_hours_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -384,9 +362,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, cooking_time_minutes_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ cooking_time_minutes_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -402,9 +379,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, delayed_start_hours_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ delayed_start_hours_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -420,9 +396,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, delayed_start_minutes_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ delayed_start_minutes_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -438,9 +413,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, favorite_modes_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ favorite_modes_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -456,9 +430,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, cooking_temperature_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ cooking_temperature_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -482,9 +455,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, start_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ start_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -500,9 +472,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, stop_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ stop_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >
@@ -518,9 +489,8 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                 @selected="${(ev: any) => {
                   ev.stopPropagation();
                   ev.preventDefault();
-                  const selectedValue = ev.target?.value || ev.detail?.value;
-                  this._config = { ...this._config, start_delayed_entity: selectedValue };
-                  this._dispatchConfigChanged();
+                  const v = ev.target?.value ?? ev.detail?.value ?? '';
+                  this._updateConfig({ start_delayed_entity: v });
                 }}"
                 @closed="${(ev: any) => { ev.stopPropagation(); ev.preventDefault(); }}"
               >

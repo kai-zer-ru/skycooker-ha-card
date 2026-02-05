@@ -1,24 +1,14 @@
 {
  "title": "Карточка SkyCooker",
  "description": "Карточка для управления устройствами SkyCooker.",
- "button.label": "Нажми меня",
- "progress": "Прогресс",
  "remaining": "Оставшееся время",
  "min": "мин",
- "cooking_time_progress": "Время приготовления",
  "delayed_start": "Отложенный старт",
  "auto_warm": "Автораподогрев",
  "start": "Старт",
  "stop": "Стоп",
  "start_delayed": "Отложенный старт",
  "delayed_launch": "Отложенный старт",
- "select_mode": "Выбрать программу",
- "select_additional_mode": "Выбрать дополнительную программу",
- "select_temperature": "Температура",
- "select_hours": "Часы",
- "select_minutes": "Минуты",
- "select_delayed_start_hours": "Часы отложенного старта",
- "select_delayed_start_minutes": "Минуты отложенного старта",
  "not_configured": "Не настроено",
  "please_configure": "Пожалуйста, настройте карточку в редакторе",
  "additional_settings": "Дополнительные настройки",
@@ -54,5 +44,5 @@
  "buttons": "Кнопки",
  "favorite_modes": "Избранные программы",
  "all_modes": "Все программы",
- "standby_mode": "Режим ожидания"
-}
+ "standby_mode": "Режим ожидания",
+  "auto_fill": "Автозаполнить по устройству"}
