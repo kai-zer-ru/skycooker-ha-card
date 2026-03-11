@@ -6,7 +6,8 @@ import { isStatusOff } from '../status-utils';
 export function renderSkyCookerHeader(
   config: SkycookerConfig,
   hass: HomeAssistant | undefined,
-  statusEntityId: string | undefined
+  statusEntityId: string | undefined,
+  showStatusText?: boolean
 ): TemplateResult {
   const statusState =
     statusEntityId && hass ? hass.states[statusEntityId]?.state ?? '' : '';
@@ -20,17 +21,20 @@ export function renderSkyCookerHeader(
       </div>
       <div class="new-summary">
         <div class="new-name">${config.name || 'SkyCooker'}</div>
+        ${showStatusText && statusState
+          ? html`<div class="new-header-status-text">${statusState}</div>`
+          : ''}
       </div>
       <div class="new-status-indicator">
         ${isActive
           ? html`<ha-icon
               icon="mdi:circle"
-              style="color: var(--success-color);"
+              class="status-active"
             ></ha-icon>`
           : isOff
             ? html`<ha-icon
                 icon="mdi:circle"
-                style="color: var(--error-color);"
+                class="status-off"
               ></ha-icon>`
             : ''}
       </div>

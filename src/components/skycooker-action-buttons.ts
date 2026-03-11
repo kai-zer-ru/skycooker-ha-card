@@ -10,41 +10,22 @@ export function renderSkyCookerActionButtons(
     <div class="new-action-buttons">
       ${config.start_entity
         ? html`
-            <div class="new-action-button-wrapper">
-              <ha-button
-                @click=${() => onButtonPress(config.start_entity)}
-                class="new-action-button"
-              >
-                <ha-icon icon="mdi:play"></ha-icon>
-              </ha-button>
-              <span class="new-action-button-label">${t('start')}</span>
-            </div>
+            <ha-button
+              @click=${() => onButtonPress(config.start_entity)}
+            >
+              <ha-icon icon="mdi:play"></ha-icon>
+              ${t('start')}
+            </ha-button>
           `
         : ''}
       ${config.stop_entity
         ? html`
-            <div class="new-action-button-wrapper">
-              <ha-button
-                @click=${() => onButtonPress(config.stop_entity)}
-                class="new-action-button"
-              >
-                <ha-icon icon="mdi:stop"></ha-icon>
-              </ha-button>
-              <span class="new-action-button-label">${t('stop')}</span>
-            </div>
-          `
-        : ''}
-      ${config.start_delayed_entity
-        ? html`
-            <div class="new-action-button-wrapper">
-              <ha-button
-                @click=${() => onButtonPress(config.start_delayed_entity)}
-                class="new-action-button"
-              >
-                <ha-icon icon="mdi:timer-play"></ha-icon>
-              </ha-button>
-              <span class="new-action-button-label">${t('start_delayed')}</span>
-            </div>
+            <ha-button
+              @click=${() => onButtonPress(config.stop_entity)}
+            >
+              <ha-icon icon="mdi:stop"></ha-icon>
+              ${t('stop')}
+            </ha-button>
           `
         : ''}
     </div>

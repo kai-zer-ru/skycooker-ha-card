@@ -3,8 +3,8 @@ import type { HomeAssistant } from '../types';
 import type { SkycookerConfig } from '../config';
 import {
   getEntityState,
-  getSelectOptions,
   getSubprogramSelectOptions,
+  getSelectOptions,
   getTemperatureOptionsWithFallback,
 } from '../entity-utils';
 
@@ -34,23 +34,22 @@ export function renderSkyCookerAdditionalControls(
         class="new-additional-content"
         style="display: ${expanded ? 'block' : 'none'};"
       >
-        ${config.additional_mode_entity
+        ${config.additional_mode_entity && hass
           ? html`
               <div class="new-cooking-time-section">
                 <div class="new-cooking-time-header">
                   <ha-icon icon="mdi:cog-outline"></ha-icon>
-                  <span class="new-cooking-time-label"
-                    >${t('additional_mode')}</span
-                  >
+                  <span class="new-cooking-time-label">
+                    ${t('additional_mode')}
+                  </span>
                 </div>
                 <div class="new-cooking-time-controls">
                   <ha-select
-                    .value=${getEntityState(
-                      hass,
-                      config.additional_mode_entity
-                    )}
-                    @selected=${(ev: Event) =>
-                      onSelectChange(config.additional_mode_entity, ev)}
+                    style="width: 100%;"
+                    .value=${getEntityState(hass, config.additional_mode_entity)}
+                    @value-changed=${(ev: Event) => {
+                      onSelectChange(config.additional_mode_entity, ev);
+                    }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
                   >
                     ${getSubprogramSelectOptions(
@@ -81,19 +80,28 @@ export function renderSkyCookerAdditionalControls(
               </div>
             `
           : ''}
-        ${temperatureEntity
+        ${temperatureEntity && hass
           ? html`
               <div class="new-temperature-section">
                 <div class="new-temperature-header">
                   <ha-icon icon="mdi:thermometer"></ha-icon>
-                  <span class="new-temperature-label">${t('temperature')}</span>
+                  <span class="new-temperature-label">
+                    ${t('temperature')}
+                  </span>
                 </div>
-                <div class="new-temperature-select-container">
+                <div class="new-temperature-controls">
                   <ha-select
-                    class="new-temperature-hidden-select"
+                    style="width: 100%;"
                     .value=${getEntityState(hass, temperatureEntity)}
-                    @selected=${(ev: Event) =>
-                      onSelectChange(temperatureEntity, ev)}
+                    @selected=${(ev: CustomEvent) => {
+                      // eslint-disable-next-line no-console
+                      console.log('[SkyCooker Card] temperature select @selected', {
+                        entityId: temperatureEntity,
+                        detail: (ev as any).detail,
+                        targetValue: (ev.target as any)?.value,
+                      });
+                      onSelectChange(temperatureEntity, ev);
+                    }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
                   >
                     ${getTemperatureOptionsWithFallback(hass, temperatureEntity)}
@@ -103,23 +111,32 @@ export function renderSkyCookerAdditionalControls(
             `
           : ''}
         ${config.cooking_time_hours_entity &&
-        config.cooking_time_minutes_entity
+        config.cooking_time_minutes_entity &&
+        hass
           ? html`
               <div class="new-cooking-time-section">
                 <div class="new-cooking-time-header">
                   <ha-icon icon="mdi:clock"></ha-icon>
-                  <span class="new-cooking-time-label"
-                    >${t('cooking_time_label')}</span
-                  >
+                  <span class="new-cooking-time-label">
+                    ${t('cooking_time_label')}
+                  </span>
                 </div>
                 <div class="new-cooking-time-controls">
                   <ha-select
+                    style="width: 100%;"
                     .value=${getEntityState(
                       hass,
                       config.cooking_time_hours_entity
                     )}
-                    @selected=${(ev: Event) =>
-                      onSelectChange(config.cooking_time_hours_entity, ev)}
+                    @selected=${(ev: CustomEvent) => {
+                      // eslint-disable-next-line no-console
+                      console.log('[SkyCooker Card] cooking_time_hours select @selected', {
+                        entityId: config.cooking_time_hours_entity,
+                        detail: (ev as any).detail,
+                        targetValue: (ev.target as any)?.value,
+                      });
+                      onSelectChange(config.cooking_time_hours_entity, ev);
+                    }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
                   >
                     ${getSelectOptions(
@@ -127,14 +144,21 @@ export function renderSkyCookerAdditionalControls(
                       config.cooking_time_hours_entity
                     )}
                   </ha-select>
-                  <span class="new-time-unit"> ${t('hours')} </span>
                   <ha-select
+                    style="width: 100%;"
                     .value=${getEntityState(
                       hass,
                       config.cooking_time_minutes_entity
                     )}
-                    @selected=${(ev: Event) =>
-                      onSelectChange(config.cooking_time_minutes_entity, ev)}
+                    @selected=${(ev: CustomEvent) => {
+                      // eslint-disable-next-line no-console
+                      console.log('[SkyCooker Card] cooking_time_minutes select @selected', {
+                        entityId: config.cooking_time_minutes_entity,
+                        detail: (ev as any).detail,
+                        targetValue: (ev.target as any)?.value,
+                      });
+                      onSelectChange(config.cooking_time_minutes_entity, ev);
+                    }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
                   >
                     ${getSelectOptions(
@@ -142,32 +166,37 @@ export function renderSkyCookerAdditionalControls(
                       config.cooking_time_minutes_entity
                     )}
                   </ha-select>
-                  <span class="new-time-unit"> ${t('minutes')}</span>
                 </div>
               </div>
             `
           : ''}
         ${config.delayed_start_hours_entity &&
-        config.delayed_start_minutes_entity
+        config.delayed_start_minutes_entity &&
+        hass
           ? html`
               <div class="new-cooking-time-section">
                 <div class="new-cooking-time-header">
                   <ha-icon icon="mdi:timer-sand"></ha-icon>
-                  <span class="new-cooking-time-label"
-                    >${t('delayed_start')}</span
-                  >
+                  <span class="new-cooking-time-label">
+                    ${t('delayed_start')}
+                  </span>
                 </div>
                 <div class="new-cooking-time-controls">
                   <ha-select
+                    style="width: 100%;"
                     .value=${getEntityState(
                       hass,
                       config.delayed_start_hours_entity
                     )}
-                    @selected=${(ev: Event) =>
-                      onSelectChange(
-                        config.delayed_start_hours_entity,
-                        ev
-                      )}
+                    @selected=${(ev: CustomEvent) => {
+                      // eslint-disable-next-line no-console
+                      console.log('[SkyCooker Card] delayed_start_hours select @selected', {
+                        entityId: config.delayed_start_hours_entity,
+                        detail: (ev as any).detail,
+                        targetValue: (ev.target as any)?.value,
+                      });
+                      onSelectChange(config.delayed_start_hours_entity, ev);
+                    }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
                   >
                     ${getSelectOptions(
@@ -175,17 +204,21 @@ export function renderSkyCookerAdditionalControls(
                       config.delayed_start_hours_entity
                     )}
                   </ha-select>
-                  <span class="new-time-unit"> ${t('hours')} </span>
                   <ha-select
+                    style="width: 100%;"
                     .value=${getEntityState(
                       hass,
                       config.delayed_start_minutes_entity
                     )}
-                    @selected=${(ev: Event) =>
-                      onSelectChange(
-                        config.delayed_start_minutes_entity,
-                        ev
-                      )}
+                    @selected=${(ev: CustomEvent) => {
+                      // eslint-disable-next-line no-console
+                      console.log('[SkyCooker Card] delayed_start_minutes select @selected', {
+                        entityId: config.delayed_start_minutes_entity,
+                        detail: (ev as any).detail,
+                        targetValue: (ev.target as any)?.value,
+                      });
+                      onSelectChange(config.delayed_start_minutes_entity, ev);
+                    }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
                   >
                     ${getSelectOptions(
@@ -193,7 +226,6 @@ export function renderSkyCookerAdditionalControls(
                       config.delayed_start_minutes_entity
                     )}
                   </ha-select>
-                  <span class="new-time-unit"> ${t('minutes')}</span>
                 </div>
               </div>
             `

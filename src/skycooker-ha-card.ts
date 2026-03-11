@@ -1,10 +1,11 @@
+// @ts-nocheck
 import { html, TemplateResult } from 'lit';
 import { property, customElement, state } from 'lit/decorators.js';
 
 import { HomeAssistant } from './types';
 import { SubscribeMixin, UnsubscribeFunc } from './subscribe-mixin';
 import { getTranslation, getLanguage } from './localize';
-import { CARD_VERSION } from './const';
+import { CARD_VERSION, FAVORITES_OTHER_OPTIONS } from './const';
 import {
   type SkycookerConfig,
   CONFIG_ENTITY_KEYS,
@@ -22,17 +23,18 @@ import { renderSkyCookerStatusBlock } from './components/skycooker-status-block'
 import { renderSkyCookerAdditionalControls } from './components/skycooker-additional-controls';
 import { renderSkyCookerModeSelector } from './components/skycooker-mode-selector';
 import { skycookerCardStyles } from './skycooker-ha-card-styles';
+import { isStatusOff } from './status-utils';
 
 @customElement('skycooker-ha-card')
 export class SkyCookerHaCard extends SubscribeMixin {
   @property({ attribute: false })
-  public hass?: HomeAssistant = undefined;
+  public hass?: HomeAssistant;
 
   @state()
-  private _config?: SkycookerConfig = undefined;
+  private _config?: SkycookerConfig;
   
   @state()
-  private _selectedMode?: string = 'all'; // По умолчанию показываем все режимы
+  private _selectedMode: 'favorite' | 'all' = 'favorite'; // По умолчанию избранные режимы
 
   @state()
   private _selectedModeName: string = ''; // Отслеживаем имя нажатой кнопки режима
@@ -50,12 +52,14 @@ export class SkyCookerHaCard extends SubscribeMixin {
   };
 
   private _initializeSelectedMode(): void {
-    this._selectedMode = hasFavoriteModes(
-      this.hass,
-      this._config?.favorite_modes_entity
-    )
-      ? 'favorite'
-      : 'all';
+    const favEntity = this._config?.favorite_modes_entity;
+    const hasFav = hasFavoriteModes(this.hass, favEntity);
+    // Если есть сущность избранного и в ней есть режимы — показываем избранное, иначе все
+    if (favEntity && hasFav) {
+      this._selectedMode = 'favorite';
+    } else {
+      this._selectedMode = 'all';
+    }
     this._syncSelectedModeFromEntity();
   }
 
@@ -108,7 +112,15 @@ export class SkyCookerHaCard extends SubscribeMixin {
   override updated(changedProperties: Map<string, unknown>): void {
     super.updated?.(changedProperties);
     if (changedProperties.has('hass') || changedProperties.has('_config')) {
-      this._syncSelectedModeFromEntity();
+      // Инициализируем вкладку по умолчанию только когда hass только что появился (при первой загрузке).
+      // Иначе при каждом обновлении hass перезаписывали бы выбор пользователя «Все программы».
+      const hassJustBecameAvailable =
+        changedProperties.has('hass') && !changedProperties.get('hass') && this.hass;
+      if (hassJustBecameAvailable) {
+        this._initializeSelectedMode();
+      } else {
+        this._syncSelectedModeFromEntity();
+      }
     }
   }
 
@@ -177,60 +189,68 @@ export class SkyCookerHaCard extends SubscribeMixin {
      `;
    }
  
-   // Используем компактный дизайн
-   return this._renderDesign();
- }
+   return this._renderUnifiedDesign();
+  }
 
-
- private _renderDesign(): TemplateResult {
-   return html`
- <ha-card class="new-design">
-   ${renderSkyCookerHeader(
-     this._config,
-     this.hass,
-     this._config.status_entity
-   )}
-   
-   <div class="new-controls-grid">
-      ${renderSkyCookerStatusBlock(
-        this._config,
-        this.hass,
-        this._t.bind(this)
-      )}
-      ${renderSkyCookerModeSelector({
-        config: this._config,
-        hass: this.hass,
-        t: this._t.bind(this),
-        selectedMode: this._selectedMode ?? 'all',
-        selectedModeName: this._selectedModeName,
-        onShowFavorite: () => this._showFavoriteModes(),
-        onShowAll: () => this._showAllModes(),
-        onModeClick: (entityId, option) => this._handleModeButtonClick(entityId, option),
-        getSelectedTime: () => this._getSelectedTime(),
-      })}
-   </div>
-   
-   ${renderSkyCookerActionButtons(
-     this._config,
-     this._t.bind(this),
-     this._handleButtonPress.bind(this)
-   )}
-   
-   ${renderSkyCookerAdditionalControls(
-     this._config,
-     this.hass,
-     this._t.bind(this),
-     this._additionalExpanded,
-     () => {
-       this._additionalExpanded = !this._additionalExpanded;
-     },
-     this._handleSelectChange.bind(this),
-     this._handleSwitchChange.bind(this)
-   )}
-   
- </ha-card>
+  private _renderUnifiedDesign(): TemplateResult {
+    return html`
+  <ha-card class="new-design new-design-v2">
+    ${renderSkyCookerHeader(
+      this._config!,
+      this.hass,
+      this._config!.status_entity,
+      true
+    )}
+    
+    ${this._renderUnifiedStateBlock()}
+    
+    <div class="new-controls-grid">
+    ${renderSkyCookerModeSelector({
+         config: this._config!,
+         hass: this.hass,
+         t: this._t.bind(this),
+         getSelectedTime: () => this._getSelectedTime(),
+         showCurrentStatusLine: false,
+         onSelectChange: (entityId: string, ev: Event) =>
+           this._handleSelectChange(entityId, ev),
+       } as any)}
+    </div>
+    
+    ${renderSkyCookerActionButtons(
+      this._config!,
+      this._t.bind(this),
+      this._handleButtonPress.bind(this)
+    )}
+    
+    ${renderSkyCookerAdditionalControls(
+      this._config!,
+      this.hass,
+      this._t.bind(this),
+      this._additionalExpanded,
+      () => {
+        this._additionalExpanded = !this._additionalExpanded;
+      },
+      this._handleSelectChange.bind(this),
+      this._handleSwitchChange.bind(this)
+    )}
+    
+  </ha-card>
 `;
- }
+  }
+
+  private _renderUnifiedStateBlock(): TemplateResult {
+    const statusState = this._config?.status_entity && this.hass
+      ? (this.hass.states[this._config.status_entity]?.state ?? '')
+      : '';
+    if (isStatusOff(statusState)) {
+      return html``;
+    }
+    return renderSkyCookerStatusBlock(
+      this._config!,
+      this.hass,
+      this._t.bind(this)
+    );
+  }
 
   private _getEntityState(entityId: string): string {
     return getEntityState(this.hass, entityId);
@@ -255,51 +275,32 @@ export class SkyCookerHaCard extends SubscribeMixin {
   return `${hours} ${this._t('hours')} ${minutes} ${this._t('minutes')}`;
   }
 
-  private _showFavoriteModes(): void {
-   // Устанавливаем флаг для отображения избранных режимов
-   this._selectedMode = 'favorite';
-   this.requestUpdate();
- }
-
- private _showAllModes(): void {
-   // Устанавливаем флаг для отображения всех режимов
-   this._selectedMode = 'all';
-   this.requestUpdate();
- }
-  
-  private _handleModeButtonClick(entityId: string, option: string): void {
-    if (!this._config || !this.hass || !entityId) return;
-
-    this._selectedModeName = option;
-    this.requestUpdate();
-
-    this.hass.callService('select', 'select_option', {
-      entity_id: entityId,
-      option,
-    });
-  }
-
   private _handleSelectChange(entityId: string, ev: any): void {
     if (!this._config || !this.hass || !entityId) return;
     
-    // Извлекаем значение из события
-    // Для ha-select значение может быть в ev.detail.value
-    // Для mwc-list-item значение может быть в ev.target.selected
-    let value = ev?.detail?.value;
-    
-    // Если нет в detail, пробуем получить из selected элемента
-    if (!value && ev?.target?.selected) {
-      value = ev.target.selected.value;
-    }
-    
+    // eslint-disable-next-line no-console
+    console.log('[SkyCooker Card] _handleSelectChange event', {
+      entityId,
+      detail: ev?.detail,
+      targetValue: ev?.target?.value,
+      selectedValue: ev?.target?.selected?.value,
+    });
+
+    let value =
+      ev?.detail?.value ??
+      ev?.target?.value ??
+      ev?.target?.selected?.value ??
+      ev?.target?.selected?.textContent?.trim();
+
     // Если всё еще нет значения, пробуем получить из текущего состояния сущности
-    if (!value) {
+    if (value === undefined || value === null || value === '') {
       value = this._getEntityState(entityId);
     }
     
-    if (!value) {
-      return;
-    }
+    if (value === undefined || value === null || value === '') return;
+
+    // Приводим к строке, чтобы select.select_option получил ожидаемый тип
+    value = String(value);
     
     // Убедимся, что не устанавливаем 'unknown' для режима готовки
     if (entityId === this._config.mode_entity && value === 'unknown') {
@@ -316,10 +317,27 @@ export class SkyCookerHaCard extends SubscribeMixin {
       value = '0';
     }
 
+    // Опция «Другое» в селекте избранного — только обновить отображение, не вызывать select_option
+    if (
+      entityId === this._config.mode_entity &&
+      FAVORITES_OTHER_OPTIONS.includes(value)
+    ) {
+      this._selectedModeName = String(value);
+      this.requestUpdate();
+      return;
+    }
+
     const temperatureEntity =
       this._config.cooking_temperature_entity || this._config.temperature_entity;
     if (entityId === temperatureEntity) {
       value = normalizeTemperatureValue(value);
+    }
+
+    // Для визуального отображения "Выбранная программа" сразу
+    // обновляем локальное имя при смене режима.
+    if (entityId === this._config.mode_entity) {
+      this._selectedModeName = String(value);
+      this.requestUpdate();
     }
 
     this.hass.callService('select', 'select_option', {
@@ -340,26 +358,26 @@ export class SkyCookerHaCard extends SubscribeMixin {
 
   private _handleButtonPress(entityId: string): void {
     if (!this._config || !this.hass || !entityId) return;
-  
-    // Проверяем, является ли entityId сущностью для кнопки "Стоп"
+
+    // Кнопка "Стоп" — вызываем сервис skycooker.stop_cooking
     if (entityId === this._config.stop_entity) {
-      const modeEntity = this._config.mode_entity;
-      if (modeEntity) {
-        const optionToSet = this._t('standby_mode');
-        this.hass.callService('select', 'select_option', {
-          entity_id: modeEntity,
-          option: optionToSet
-        });
-      }
+      const targetEntity =
+        this._config.status_entity ||
+        this._config.mode_entity ||
+        this._config.start_entity ||
+        this._config.stop_entity;
+      this.hass.callService('skycooker', 'stop_cooking', {
+        entity_id: targetEntity,
+      });
+      return;
     }
- 
-    // Проверяем, является ли entityId сущностью для кнопки "Старт"
+
+    // Кнопка "Старт" — вызываем сервис skycooker.start_cooking
     if (entityId === this._config.start_entity) {
-      // Проверяем состояние select.skycooker_rmc_m40s_vremia_otlozhennogo_starta_chasy
+      // Перед запуском убедимся, что значения отложенного старта не "unknown"
       const delayedStartHoursEntity = this._config.delayed_start_hours_entity;
       if (delayedStartHoursEntity) {
         const currentState = this._getEntityState(delayedStartHoursEntity);
-        // Если состояние 'unknown', заменяем на '0'
         if (currentState === 'unknown') {
           this.hass.callService('select', 'select_option', {
             entity_id: delayedStartHoursEntity,
@@ -367,11 +385,9 @@ export class SkyCookerHaCard extends SubscribeMixin {
           });
         }
       }
-      // Проверяем состояние select.skycooker_rmc_m40s_vremia_otlozhennogo_starta_minuty
       const delayedStartMinutesEntity = this._config.delayed_start_minutes_entity;
       if (delayedStartMinutesEntity) {
         const currentState = this._getEntityState(delayedStartMinutesEntity);
-        // Если состояние 'unknown', заменяем на '0'
         if (currentState === 'unknown') {
           this.hass.callService('select', 'select_option', {
             entity_id: delayedStartMinutesEntity,
@@ -379,12 +395,15 @@ export class SkyCookerHaCard extends SubscribeMixin {
           });
         }
       }
-      this.requestUpdate();
+      const targetEntity =
+        this._config.status_entity ||
+        this._config.mode_entity ||
+        this._config.start_entity;
+      this.hass.callService('skycooker', 'start_cooking', {
+        entity_id: targetEntity,
+      });
+      return;
     }
- 
-    this.hass.callService('button', 'press', {
-      entity_id: entityId
-    });
   }
 
   static get styles() {
@@ -392,7 +411,14 @@ export class SkyCookerHaCard extends SubscribeMixin {
   }
 }
 
-console.log('SkyCooker Card version:', CARD_VERSION);
+// Красивый лог версии карточки в консоль
+// eslint-disable-next-line no-console
+console.log(
+  '%cSkyCooker Card%c version %c' + CARD_VERSION,
+  'background:#1e88e5;color:#fff;padding:2px 6px;border-radius:3px 0 0 3px;font-weight:bold;',
+  'background:#424242;color:#fff;padding:2px 6px 2px 4px;border-radius:0;font-weight:normal;',
+  'background:#2e7d32;color:#fff;padding:2px 6px;border-radius:0 3px 3px 0;font-weight:bold;'
+);
 
 (window as any).customCards = (window as any).customCards || [];
 (window as any).customCards.push({

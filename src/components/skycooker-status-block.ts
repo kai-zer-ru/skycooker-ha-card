@@ -28,6 +28,34 @@ export function renderSkyCookerStatusBlock(
     !!config.delayed_launch_time_entity
   );
 
+  const successRate =
+    config.success_rate_entity && hass
+      ? getEntityState(hass, config.success_rate_entity)
+      : '';
+  const errorCode =
+    config.error_code_entity && hass
+      ? getEntityState(hass, config.error_code_entity)
+      : '';
+  const soundEnabledRaw =
+    config.sound_enabled_entity && hass
+      ? getEntityState(hass, config.sound_enabled_entity)
+      : '';
+
+  const hasSuccessRate =
+    successRate !== '' && successRate !== 'N/A' && successRate !== 'unknown';
+  const hasErrorCode =
+    errorCode !== '' &&
+    errorCode !== 'N/A' &&
+    errorCode !== 'unknown' &&
+    errorCode !== '0';
+  const hasSoundEnabled =
+    soundEnabledRaw !== '' && soundEnabledRaw !== 'N/A' && soundEnabledRaw !== 'unknown';
+
+  const soundEnabled =
+    soundEnabledRaw === 'on' ||
+    soundEnabledRaw === 'true' ||
+    soundEnabledRaw === 'True';
+
   return html`
     <div class="new-control-group">
       ${showTemp && temperatureEntity
@@ -98,6 +126,66 @@ export function renderSkyCookerStatusBlock(
               `
             : ''}
         </div>
+        ${hasSuccessRate || hasErrorCode || hasSoundEnabled
+          ? html`
+              <div class="new-time-sensors-row">
+                ${hasSuccessRate
+                  ? html`
+                      <div class="new-control-item">
+                        <div class="new-control-label">
+                          ${t('success_rate')}
+                        </div>
+                        <div class="new-control-icon-value">
+                          <ha-icon
+                            icon="mdi:bluetooth-connect"
+                            class="new-control-icon"
+                          ></ha-icon>
+                          <div class="new-control-value">
+                            ${successRate}%
+                          </div>
+                        </div>
+                      </div>
+                    `
+                  : ''}
+                ${hasErrorCode
+                  ? html`
+                      <div class="new-control-item">
+                        <div class="new-control-label">${t('error_code')}</div>
+                        <div class="new-control-icon-value">
+                          <ha-icon
+                            icon="mdi:alert-circle"
+                            class="new-control-icon"
+                          ></ha-icon>
+                          <div class="new-control-value">
+                            ${errorCode}
+                          </div>
+                        </div>
+                      </div>
+                    `
+                  : ''}
+                ${hasSoundEnabled
+                  ? html`
+                      <div class="new-control-item">
+                        <div class="new-control-label">
+                          ${t('sound_enabled')}
+                        </div>
+                        <div class="new-control-icon-value">
+                          <ha-icon
+                            icon=${soundEnabled
+                              ? 'mdi:volume-high'
+                              : 'mdi:volume-off'}
+                            class="new-control-icon"
+                          ></ha-icon>
+                          <div class="new-control-value">
+                            ${soundEnabled ? t('sound_on') : t('sound_off')}
+                          </div>
+                        </div>
+                      </div>
+                    `
+                  : ''}
+              </div>
+            `
+          : ''}
       </div>
     </div>
   `;

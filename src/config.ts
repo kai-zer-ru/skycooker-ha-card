@@ -22,6 +22,9 @@ export interface SkycookerConfig {
   remaining_time_entity: string;
   cooking_time_entity: string;
   status_entity: string;
+  success_rate_entity: string;
+  error_code_entity: string;
+  sound_enabled_entity: string;
   current_mode_entity: string;
   current_additional_mode_entity: string;
   auto_warm_time_entity: string;
@@ -45,6 +48,9 @@ export const CONFIG_ENTITY_KEYS: (keyof SkycookerConfig)[] = [
   'remaining_time_entity',
   'cooking_time_entity',
   'status_entity',
+  'success_rate_entity',
+  'error_code_entity',
+  'sound_enabled_entity',
   'current_mode_entity',
   'current_additional_mode_entity',
   'auto_warm_time_entity',
@@ -72,6 +78,9 @@ export const DEFAULT_CONFIG: SkycookerConfig = {
   remaining_time_entity: '',
   cooking_time_entity: '',
   status_entity: '',
+  success_rate_entity: '',
+  error_code_entity: '',
+  sound_enabled_entity: '',
   current_mode_entity: '',
   current_additional_mode_entity: '',
   auto_warm_time_entity: '',
@@ -109,6 +118,9 @@ export function normalizeConfig(
     remaining_time_entity: config.remaining_time_entity ?? '',
     cooking_time_entity: config.cooking_time_entity ?? '',
     status_entity: config.status_entity ?? '',
+    success_rate_entity: config.success_rate_entity ?? '',
+    error_code_entity: config.error_code_entity ?? '',
+    sound_enabled_entity: config.sound_enabled_entity ?? '',
     current_mode_entity: config.current_mode_entity ?? '',
     current_additional_mode_entity: config.current_additional_mode_entity ?? '',
     auto_warm_time_entity: config.auto_warm_time_entity ?? '',

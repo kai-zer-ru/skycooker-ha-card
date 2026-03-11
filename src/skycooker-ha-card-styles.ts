@@ -2,14 +2,23 @@ import { css, CSSResult } from 'lit';
 
 export const skycookerCardStyles: CSSResult = css`
   :host {
-    --skycooker-spacing: var(--mush-spacing, 10px);
-    --skycooker-control-radius: var(--mush-control-border-radius, 12px);
-    --skycooker-chip-radius: var(--mush-chip-border-radius, 19px);
-    --skycooker-chip-height: var(--mush-chip-height, 36px);
-    --skycooker-icon-radius: var(--mush-icon-border-radius, 50%);
-    --skycooker-icon-size: var(--mush-icon-size, 36px);
-    --skycooker-control-height: var(--mush-control-height, 42px);
+    /* Размеры и отступы (fallback без Mush) */
+    --skycooker-spacing: 10px;
+    --skycooker-control-radius: 12px;
+    --skycooker-chip-radius: 19px;
+    --skycooker-chip-height: 36px;
+    --skycooker-icon-radius: 50%;
+    --skycooker-icon-size: 36px;
+    --skycooker-control-height: 42px;
     font-family: var(--mdc-typography-font-family, inherit);
+    /* Цвета только из темы HA */
+    --skycooker-bg: var(--card-background-color);
+    --skycooker-border: var(--divider-color);
+    --skycooker-text: var(--primary-text-color);
+    --skycooker-text-secondary: var(--secondary-text-color);
+    --skycooker-accent: var(--primary-color);
+    --skycooker-accent-text: var(--primary-inverse-color, var(--text-primary-color, inherit));
+    --skycooker-shadow: var(--ha-card-box-shadow, 0 1px 3px rgba(0, 0, 0, 0.08));
   }
 
   ha-card {
@@ -28,11 +37,11 @@ export const skycookerCardStyles: CSSResult = css`
     justify-content: center;
     gap: 20px;
     padding: 10px 0;
-    border-bottom: 1px solid var(--divider-color);
+    border-bottom: 1px solid var(--skycooker-border);
   }
   .header .icon {
     font-size: 48px;
-    color: var(--primary-color);
+    color: var(--skycooker-accent);
   }
   .header .summary {
     display: flex;
@@ -44,42 +53,47 @@ export const skycookerCardStyles: CSSResult = css`
   }
   .header .state {
     font-size: 14px;
-    color: var(--secondary-text-color);
-  }
-  ha-select {
-    min-width: 120px;
+    color: var(--skycooker-text-secondary);
   }
   ha-button {
-    --mdc-theme-primary: var(--primary-color);
-    --mdc-theme-secondary: var(--secondary-color);
+    --mdc-theme-primary: var(--skycooker-accent);
+    --mdc-theme-secondary: var(--skycooker-text-secondary);
   }
   .setup-message {
     padding: 20px;
     text-align: center;
-    color: var(--secondary-text-color);
+    color: var(--skycooker-text-secondary);
     font-size: 16px;
   }
 
   ha-card.new-design {
     padding: 12px;
     gap: 12px;
-    background: var(--card-background-color);
+    background: var(--skycooker-bg);
     border-radius: var(--ha-card-border-radius, 16px);
-    box-shadow: var(--ha-card-box-shadow, 0px 2px 8px rgba(0,0,0,0.1));
+    box-shadow: var(--skycooker-shadow);
     overflow: hidden;
   }
 
+  ha-card.new-design.new-design-v2 {
+    gap: 14px;
+  }
+
+  .new-design-v2 .new-controls-grid {
+    margin-top: 2px;
+  }
+
+  /* Заголовок: рамка с отступом от края, как у остальных блоков */
   .new-header {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: var(--skycooker-spacing);
     padding: var(--skycooker-spacing);
-    background: var(--ha-card-header-color, var(--card-background-color));
+    background: var(--skycooker-bg);
+    border: 1px solid var(--skycooker-border);
     border-radius: var(--skycooker-control-radius);
-    margin: -12px -12px 12px -12px;
-    border-bottom: 1px solid var(--divider-color);
-    color: var(--primary-text-color);
+    color: var(--skycooker-text);
   }
 
   .new-icon {
@@ -92,8 +106,8 @@ export const skycookerCardStyles: CSSResult = css`
     justify-content: center;
     flex-shrink: 0;
     border-radius: var(--skycooker-icon-radius);
-    background: rgba(var(--rgb-primary-text-color, 255, 255, 255), 0.05);
-    color: var(--primary-color);
+    background: var(--secondary-background-color, rgba(128, 128, 128, 0.08));
+    color: var(--skycooker-accent);
   }
 
   .new-icon ha-icon {
@@ -112,16 +126,30 @@ export const skycookerCardStyles: CSSResult = css`
     font-size: var(--title-font-size, 24px);
     font-weight: 600;
     font-family: inherit;
-    color: var(--primary-text-color);
+    color: var(--skycooker-text);
+  }
+
+  .new-header-status-text {
+    font-size: var(--card-secondary-font-size, 12px);
+    color: var(--skycooker-text-secondary);
+    margin-top: 4px;
   }
 
   .new-state {
     font-size: var(--card-secondary-font-size, 12px);
-    color: var(--secondary-text-color);
+    color: var(--skycooker-text-secondary);
   }
 
   .new-status-indicator {
     font-size: 20px;
+  }
+
+  .new-status-indicator .status-active {
+    color: var(--state-icon-active-color, var(--success-color, var(--skycooker-accent)));
+  }
+
+  .new-status-indicator .status-off {
+    color: var(--state-icon-inactive-color, var(--error-color, var(--skycooker-text-secondary)));
   }
 
   .new-controls-grid {
@@ -135,9 +163,9 @@ export const skycookerCardStyles: CSSResult = css`
     flex-direction: column;
     gap: var(--skycooker-spacing);
     padding: var(--skycooker-spacing);
-    background-color: var(--card-background-color);
+    background-color: var(--skycooker-bg);
     border-radius: var(--skycooker-control-radius);
-    border: 1px solid var(--ha-card-border-color, var(--divider-color));
+    border: 1px solid var(--skycooker-border);
   }
 
   .new-control-item {
@@ -148,7 +176,7 @@ export const skycookerCardStyles: CSSResult = css`
 
   .new-control-icon {
     font-size: 20px;
-    color: var(--primary-color);
+    color: var(--skycooker-accent);
   }
 
   .new-control-content {
@@ -159,7 +187,7 @@ export const skycookerCardStyles: CSSResult = css`
 
   .new-control-label {
     font-size: var(--card-secondary-font-size, 12px);
-    color: var(--secondary-text-color);
+    color: var(--skycooker-text-secondary);
   }
 
   .new-control-value {
@@ -183,7 +211,7 @@ export const skycookerCardStyles: CSSResult = css`
 
   .new-selected-mode {
     font-size: var(--card-primary-font-size, 14px);
-    color: var(--secondary-text-color);
+    color: var(--skycooker-text-secondary);
     text-align: center;
     font-family: inherit;
     font-weight: 500;
@@ -192,14 +220,14 @@ export const skycookerCardStyles: CSSResult = css`
   .selected-mode-text {
     font-size: var(--card-primary-font-size, 14px);
     font-weight: 500;
-    color: var(--primary-color);
+    color: var(--skycooker-accent);
     margin-left: 4px;
     font-family: inherit;
   }
 
   .new-selected-time {
     font-size: var(--card-primary-font-size, 14px);
-    color: var(--secondary-text-color);
+    color: var(--skycooker-text-secondary);
     text-align: center;
     min-height: 20px;
     font-family: inherit;
@@ -209,152 +237,29 @@ export const skycookerCardStyles: CSSResult = css`
   .selected-time-text {
     font-size: var(--card-primary-font-size, 14px);
     font-weight: 500;
-    color: var(--primary-color);
+    color: var(--skycooker-accent);
     margin-left: 4px;
     font-family: inherit;
   }
 
-  .new-mode-tabs {
-    display: flex;
-    gap: var(--skycooker-spacing);
-    margin-bottom: var(--skycooker-spacing);
-    justify-content: center;
-  }
-
-  .new-mode-tab {
-    padding: 0 16px;
-    height: var(--skycooker-chip-height);
-    min-height: var(--skycooker-chip-height);
-    display: flex;
-    align-items: center;
-    background-color: var(--ha-card-background, var(--card-background-color));
-    border-radius: var(--skycooker-chip-radius);
-    cursor: pointer;
-    font-size: var(--card-primary-font-size, 14px);
-    font-weight: 500;
-    transition: all 0.2s ease;
-    border: 1px solid var(--ha-card-border-color, var(--divider-color));
-  }
-
-  .new-mode-tab.active {
-    background-color: var(--primary-color);
-    color: var(--primary-inverse-color, white);
-    border-color: var(--primary-color);
-  }
-
-  .new-mode-tab:hover {
-    background-color: var(--ha-card-background, var(--card-background-color));
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  }
-
-  .new-mode-buttons {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--skycooker-spacing);
+  .new-mode-select {
     margin-top: var(--skycooker-spacing);
-    justify-content: center;
   }
 
-  .new-mode-button-wrapper {
-    flex: 1 1 calc(50% - var(--skycooker-spacing));
-    min-width: 120px;
-    max-width: 200px;
-    display: flex;
-    justify-content: center;
-  }
 
-  .new-mode-button {
-    --mdc-theme-primary: var(--primary-color);
-    --mdc-theme-secondary: var(--secondary-color);
-    border-radius: var(--skycooker-chip-radius);
-    height: var(--skycooker-chip-height);
-    min-height: var(--skycooker-chip-height);
-    padding: 0 16px;
-    font-size: var(--card-primary-font-size, 14px);
-    background-color: var(--ha-card-background, var(--card-background-color));
-    border: 1px solid var(--ha-card-border-color, var(--divider-color));
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-    min-width: 120px;
-    max-width: 200px;
-    white-space: normal;
-    word-wrap: break-word;
-  }
-
-  .new-mode-button .mode-button-icon {
-    width: 18px;
-    height: 18px;
-    margin-right: 6px;
-  }
-
-  .new-mode-button .mode-button-text {
-    font-size: var(--card-primary-font-size, 14px);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-  }
-
-  .new-mode-button:hover {
-    background-color: var(--ha-card-background, var(--card-background-color));
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
-  }
-
+  /* Стандартные ha-button: только контейнер, без кастомного вида кнопок */
   .new-action-buttons {
     display: flex;
     justify-content: center;
+    flex-wrap: wrap;
     gap: var(--skycooker-spacing);
     padding: var(--skycooker-spacing);
-    background-color: var(--card-background-color);
+    background-color: var(--skycooker-bg);
     border-radius: var(--skycooker-control-radius);
   }
 
-  .new-action-button-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-  }
-
-  .new-action-button {
-    --mdc-theme-primary: var(--primary-color);
-    --mdc-theme-secondary: var(--secondary-color);
-    border-radius: 50%;
-    width: 56px;
-    height: 56px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background-color: var(--card-background-color);
-    transition: all 0.2s ease;
-    border: 1px solid var(--ha-card-border-color, var(--divider-color));
-  }
-
-  .new-action-button ha-icon {
-    width: 28px;
-    height: 28px;
-    opacity: 1;
-    filter: brightness(1);
-    font-size: 28px;
-  }
-
-  .new-action-button.pressed {
-    background-color: var(--card-background-color);
-    box-shadow: none;
-  }
-
-  .new-action-button.pressed ha-icon {
-    color: var(--primary-color);
-  }
-
-  .new-action-button-label {
-    font-size: var(--card-secondary-font-size, 12px);
-    color: var(--secondary-text-color);
-    text-align: center;
+  .new-action-buttons ha-button {
+    --mdc-theme-primary: var(--skycooker-accent);
   }
 
   .new-additional-controls {
@@ -362,7 +267,7 @@ export const skycookerCardStyles: CSSResult = css`
     flex-direction: column;
     gap: var(--skycooker-spacing);
     padding: var(--skycooker-spacing);
-    background-color: var(--card-background-color);
+    background-color: var(--skycooker-bg);
     border-radius: var(--skycooker-control-radius);
     margin-top: 4px;
   }
@@ -395,7 +300,7 @@ export const skycookerCardStyles: CSSResult = css`
     flex-direction: column;
     gap: 10px;
     padding: 12px 0;
-    border-top: 1px solid var(--divider-color);
+    border-top: 1px solid var(--skycooker-border);
   }
 
   .new-auto-warm-section {
@@ -403,7 +308,7 @@ export const skycookerCardStyles: CSSResult = css`
     flex-direction: column;
     gap: var(--skycooker-spacing);
     padding: var(--skycooker-spacing);
-    background-color: var(--card-background-color);
+    background-color: var(--skycooker-bg);
     border-radius: var(--skycooker-control-radius);
     margin-bottom: var(--skycooker-spacing);
   }
@@ -425,11 +330,8 @@ export const skycookerCardStyles: CSSResult = css`
     display: flex;
     flex-direction: column;
     gap: var(--skycooker-spacing);
-    padding: var(--skycooker-spacing) 12px 24px 12px;
-    background-color: var(--card-background-color);
-    border-radius: var(--skycooker-control-radius);
-    margin: var(--skycooker-spacing) 0;
-    border: 1px solid var(--ha-card-border-color, var(--divider-color));
+    padding: 0;
+    margin: var(--skycooker-spacing) 0 0 0;
     width: 100%;
     box-sizing: border-box;
   }
@@ -449,6 +351,13 @@ export const skycookerCardStyles: CSSResult = css`
     text-align: center;
   }
 
+  .new-temperature-controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding-left: 0;
+  }
+
   .new-temperature-select-container {
     display: flex;
     justify-content: center;
@@ -460,23 +369,20 @@ export const skycookerCardStyles: CSSResult = css`
     width: 100%;
     min-width: 120px;
     max-width: 180px;
-    --mdc-theme-primary: var(--primary-color);
+    --mdc-theme-primary: var(--skycooker-accent);
     --mdc-shape-small: var(--skycooker-control-radius);
     --mdc-menu-min-width: 120px;
     height: var(--skycooker-control-height);
     border-radius: var(--skycooker-control-radius);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    box-shadow: var(--skycooker-shadow);
   }
 
   .new-cooking-time-section {
     display: flex;
     flex-direction: column;
     gap: var(--skycooker-spacing);
-    padding: var(--skycooker-spacing) 12px 24px 12px;
-    background-color: var(--card-background-color);
-    border-radius: var(--skycooker-control-radius);
-    margin: var(--skycooker-spacing) 0;
-    border: 1px solid var(--ha-card-border-color, var(--divider-color));
+    padding: 0;
+    margin: var(--skycooker-spacing) 0 0 0;
     width: 100%;
     box-sizing: border-box;
   }
@@ -504,6 +410,24 @@ export const skycookerCardStyles: CSSResult = css`
     padding-left: 0;
   }
 
+  .entity-rows-column {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 100%;
+  }
+
+  .entity-rows-column hui-generic-entity-row {
+    display: block;
+    width: 100%;
+  }
+
+  /* В дополнительных настройках скрываем текстовые подписи у entity-row,
+     чтобы визуально оставались только стандартные селекты HA */
+  .entity-rows-column hui-generic-entity-row .info {
+    display: none;
+  }
+
   .new-time-unit {
     font-size: var(--card-primary-font-size, 14px);
     font-weight: 500;
@@ -512,7 +436,7 @@ export const skycookerCardStyles: CSSResult = css`
   .new-auto-warm-time {
     padding-left: 30px;
     font-size: var(--card-secondary-font-size, 12px);
-    color: var(--secondary-text-color);
+    color: var(--skycooker-text-secondary);
   }
 
   .new-time-sensors-container {
@@ -558,52 +482,4 @@ export const skycookerCardStyles: CSSResult = css`
     gap: 8px;
   }
 
-  ha-select {
-    --mdc-theme-primary: var(--primary-color);
-    --mdc-shape-small: var(--skycooker-control-radius);
-    min-width: 80px;
-    height: var(--skycooker-control-height);
-    border-radius: var(--skycooker-control-radius);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-    font-size: var(--card-primary-font-size, 14px);
-  }
-
-  ha-select .mdc-floating-label {
-    display: none !important;
-  }
-
-  ha-select .mdc-floating-label.mdc-floating-label--float-above {
-    display: none !important;
-  }
-
-  ha-select .mdc-select__anchor {
-    padding-top: 0 !important;
-    padding-bottom: 0 !important;
-    height: var(--skycooker-control-height);
-    display: flex;
-    align-items: center;
-    padding: 0 8px;
-    border-radius: var(--skycooker-control-radius);
-  }
-
-  ha-select .mdc-select__dropdown-icon {
-    margin-right: 4px;
-  }
-
-  ha-select .mdc-select__menu {
-    min-width: 100%;
-    max-width: 300px;
-    border-radius: var(--skycooker-control-radius);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  ha-select .mdc-select__selected-text {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  ha-select:hover {
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  }
 `;
