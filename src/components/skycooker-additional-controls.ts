@@ -7,6 +7,7 @@ import {
   getSelectOptions,
   getTemperatureOptionsWithFallback,
 } from '../entity-utils';
+import type { CardDesign } from './skycooker-header';
 
 export function renderSkyCookerAdditionalControls(
   config: SkycookerConfig,
@@ -15,13 +16,23 @@ export function renderSkyCookerAdditionalControls(
   expanded: boolean,
   onToggle: () => void,
   onSelectChange: (entityId: string, ev: Event) => void,
-  onSwitchChange: (entityId: string, checked: boolean) => void
+  onSwitchChange: (entityId: string, checked: boolean) => void,
+  design: CardDesign = 'classic'
 ): TemplateResult {
   const temperatureEntity =
     config.cooking_temperature_entity || config.temperature_entity;
 
+  const panelClass =
+    design === 'modern'
+      ? 'new-additional-controls modern-settings-panel'
+      : 'new-additional-controls';
+  const sectionClass =
+    design === 'modern' ? 'modern-setting-block' : '';
+  const labelClass =
+    design === 'modern' ? 'modern-setting-label' : '';
+
   return html`
-    <div class="new-additional-controls">
+    <div class="${panelClass}">
       <div class="new-section-header" @click=${onToggle}>
         <ha-icon icon="mdi:cog"></ha-icon>
         <span>${t('additional_settings')}</span>
@@ -31,13 +42,12 @@ export function renderSkyCookerAdditionalControls(
         ></ha-icon>
       </div>
       <div
-        class="new-additional-content"
-        style="display: ${expanded ? 'block' : 'none'};"
+        class="new-additional-content ${expanded ? 'is-expanded' : ''}"
       >
         ${config.additional_mode_entity && hass
           ? html`
-              <div class="new-cooking-time-section">
-                <div class="new-cooking-time-header">
+              <div class="new-cooking-time-section ${sectionClass}">
+                <div class="new-cooking-time-header ${labelClass}">
                   <ha-icon icon="mdi:cog-outline"></ha-icon>
                   <span class="new-cooking-time-label">
                     ${t('additional_mode')}
@@ -63,10 +73,19 @@ export function renderSkyCookerAdditionalControls(
           : ''}
         ${config.auto_warm_entity
           ? html`
-              <div class="new-auto-warm-section">
+              <div class="new-auto-warm-section ${sectionClass}">
                 <div class="new-auto-warm-header">
-                  <ha-icon icon="mdi:heat-wave"></ha-icon>
-                  <span class="new-auto-warm-label">${t('auto_warm')}</span>
+                  ${design === 'modern'
+                    ? html`
+                        <div class="${labelClass}">
+                          <ha-icon icon="mdi:heat-wave"></ha-icon>
+                          <span class="new-auto-warm-label">${t('auto_warm')}</span>
+                        </div>
+                      `
+                    : html`
+                        <ha-icon icon="mdi:heat-wave"></ha-icon>
+                        <span class="new-auto-warm-label">${t('auto_warm')}</span>
+                      `}
                   <ha-switch
                     .checked=${getEntityState(hass, config.auto_warm_entity) ===
                     'on'}
@@ -82,8 +101,8 @@ export function renderSkyCookerAdditionalControls(
           : ''}
         ${temperatureEntity && hass
           ? html`
-              <div class="new-temperature-section">
-                <div class="new-temperature-header">
+              <div class="new-temperature-section ${sectionClass}">
+                <div class="new-temperature-header ${labelClass}">
                   <ha-icon icon="mdi:thermometer"></ha-icon>
                   <span class="new-temperature-label">
                     ${t('temperature')}
@@ -94,12 +113,6 @@ export function renderSkyCookerAdditionalControls(
                     style="width: 100%;"
                     .value=${getEntityState(hass, temperatureEntity)}
                     @selected=${(ev: CustomEvent) => {
-                      // eslint-disable-next-line no-console
-                      console.log('[SkyCooker Card] temperature select @selected', {
-                        entityId: temperatureEntity,
-                        detail: (ev as any).detail,
-                        targetValue: (ev.target as any)?.value,
-                      });
                       onSelectChange(temperatureEntity, ev);
                     }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
@@ -114,8 +127,8 @@ export function renderSkyCookerAdditionalControls(
         config.cooking_time_minutes_entity &&
         hass
           ? html`
-              <div class="new-cooking-time-section">
-                <div class="new-cooking-time-header">
+              <div class="new-cooking-time-section ${sectionClass}">
+                <div class="new-cooking-time-header ${labelClass}">
                   <ha-icon icon="mdi:clock"></ha-icon>
                   <span class="new-cooking-time-label">
                     ${t('cooking_time_label')}
@@ -129,12 +142,6 @@ export function renderSkyCookerAdditionalControls(
                       config.cooking_time_hours_entity
                     )}
                     @selected=${(ev: CustomEvent) => {
-                      // eslint-disable-next-line no-console
-                      console.log('[SkyCooker Card] cooking_time_hours select @selected', {
-                        entityId: config.cooking_time_hours_entity,
-                        detail: (ev as any).detail,
-                        targetValue: (ev.target as any)?.value,
-                      });
                       onSelectChange(config.cooking_time_hours_entity, ev);
                     }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
@@ -151,12 +158,6 @@ export function renderSkyCookerAdditionalControls(
                       config.cooking_time_minutes_entity
                     )}
                     @selected=${(ev: CustomEvent) => {
-                      // eslint-disable-next-line no-console
-                      console.log('[SkyCooker Card] cooking_time_minutes select @selected', {
-                        entityId: config.cooking_time_minutes_entity,
-                        detail: (ev as any).detail,
-                        targetValue: (ev.target as any)?.value,
-                      });
                       onSelectChange(config.cooking_time_minutes_entity, ev);
                     }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
@@ -174,8 +175,8 @@ export function renderSkyCookerAdditionalControls(
         config.delayed_start_minutes_entity &&
         hass
           ? html`
-              <div class="new-cooking-time-section">
-                <div class="new-cooking-time-header">
+              <div class="new-cooking-time-section ${sectionClass}">
+                <div class="new-cooking-time-header ${labelClass}">
                   <ha-icon icon="mdi:timer-sand"></ha-icon>
                   <span class="new-cooking-time-label">
                     ${t('delayed_start')}
@@ -189,12 +190,6 @@ export function renderSkyCookerAdditionalControls(
                       config.delayed_start_hours_entity
                     )}
                     @selected=${(ev: CustomEvent) => {
-                      // eslint-disable-next-line no-console
-                      console.log('[SkyCooker Card] delayed_start_hours select @selected', {
-                        entityId: config.delayed_start_hours_entity,
-                        detail: (ev as any).detail,
-                        targetValue: (ev.target as any)?.value,
-                      });
                       onSelectChange(config.delayed_start_hours_entity, ev);
                     }}
                     @closed=${(ev: Event) => ev.stopPropagation()}
@@ -211,12 +206,6 @@ export function renderSkyCookerAdditionalControls(
                       config.delayed_start_minutes_entity
                     )}
                     @selected=${(ev: CustomEvent) => {
-                      // eslint-disable-next-line no-console
-                      console.log('[SkyCooker Card] delayed_start_minutes select @selected', {
-                        entityId: config.delayed_start_minutes_entity,
-                        detail: (ev as any).detail,
-                        targetValue: (ev.target as any)?.value,
-                      });
                       onSelectChange(config.delayed_start_minutes_entity, ev);
                     }}
                     @closed=${(ev: Event) => ev.stopPropagation()}

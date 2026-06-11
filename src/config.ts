@@ -7,6 +7,7 @@ export interface SkycookerConfig {
   name: string;
   icon: string;
   language: string;
+  new_design: boolean;
   mode_entity: string;
   additional_mode_entity: string;
   cooking_time_hours_entity: string;
@@ -63,6 +64,7 @@ export const DEFAULT_CONFIG: SkycookerConfig = {
   name: 'SkyCooker',
   icon: 'mdi:stove',
   language: 'ru',
+  new_design: false,
   mode_entity: '',
   additional_mode_entity: '',
   cooking_time_hours_entity: '',
@@ -103,6 +105,7 @@ export function normalizeConfig(
     name: config.name ?? DEFAULT_CONFIG.name,
     icon: config.icon ?? DEFAULT_CONFIG.icon,
     language: lang,
+    new_design: config.new_design ?? DEFAULT_CONFIG.new_design,
     mode_entity: config.mode_entity ?? '',
     additional_mode_entity: config.additional_mode_entity ?? '',
     cooking_time_hours_entity: config.cooking_time_hours_entity ?? '',

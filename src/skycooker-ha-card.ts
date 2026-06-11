@@ -1,9 +1,9 @@
 // @ts-nocheck
-import { html, TemplateResult } from 'lit';
+import { html, LitElement, TemplateResult } from 'lit';
 import { property, customElement, state } from 'lit/decorators.js';
+import type { PropertyValues } from 'lit';
 
 import { HomeAssistant } from './types';
-import { SubscribeMixin, UnsubscribeFunc } from './subscribe-mixin';
 import { getTranslation, getLanguage } from './localize';
 import { CARD_VERSION, FAVORITES_OTHER_OPTIONS } from './const';
 import {
@@ -17,7 +17,10 @@ import {
   hasFavoriteModes,
   normalizeTemperatureValue,
 } from './entity-utils';
-import { renderSkyCookerHeader } from './components/skycooker-header';
+import {
+  renderSkyCookerHeader,
+  type CardDesign,
+} from './components/skycooker-header';
 import { renderSkyCookerActionButtons } from './components/skycooker-action-buttons';
 import { renderSkyCookerStatusBlock } from './components/skycooker-status-block';
 import { renderSkyCookerAdditionalControls } from './components/skycooker-additional-controls';
@@ -26,7 +29,7 @@ import { skycookerCardStyles } from './skycooker-ha-card-styles';
 import { isStatusOff } from './status-utils';
 
 @customElement('skycooker-ha-card')
-export class SkyCookerHaCard extends SubscribeMixin {
+export class SkyCookerHaCard extends LitElement {
   @property({ attribute: false })
   public hass?: HomeAssistant;
 
@@ -109,8 +112,43 @@ export class SkyCookerHaCard extends SubscribeMixin {
     super.disconnectedCallback();
   }
 
-  override updated(changedProperties: Map<string, unknown>): void {
-    super.updated?.(changedProperties);
+  private _getTrackedEntityIds(): string[] {
+    if (!this._config) return [];
+    return CONFIG_ENTITY_KEYS.map((key) => this._config![key] as string).filter(
+      (entity) => !!entity
+    );
+  }
+
+  protected override shouldUpdate(changedProperties: PropertyValues): boolean {
+    if (
+      changedProperties.has('_config') ||
+      changedProperties.has('_selectedMode') ||
+      changedProperties.has('_selectedModeName') ||
+      changedProperties.has('_additionalExpanded')
+    ) {
+      return true;
+    }
+
+    if (!changedProperties.has('hass')) {
+      return false;
+    }
+
+    const oldHass = changedProperties.get('hass') as HomeAssistant | undefined;
+    if (!oldHass || !this.hass) {
+      return true;
+    }
+
+    for (const entityId of this._getTrackedEntityIds()) {
+      if (oldHass.states[entityId] !== this.hass.states[entityId]) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  override updated(changedProperties: PropertyValues): void {
+    super.updated(changedProperties);
     if (changedProperties.has('hass') || changedProperties.has('_config')) {
       // Инициализируем вкладку по умолчанию только когда hass только что появился (при первой загрузке).
       // Иначе при каждом обновлении hass перезаписывали бы выбор пользователя «Все программы».
@@ -122,39 +160,6 @@ export class SkyCookerHaCard extends SubscribeMixin {
         this._syncSelectedModeFromEntity();
       }
     }
-  }
-
-  public hassSubscribe(): (() => Promise<UnsubscribeFunc>)[] {
-    if (!this._config || !this.hass) return [];
-
-    const entities = CONFIG_ENTITY_KEYS.map((key) => this._config![key])
-      .filter((entity): entity is string => !!entity);
-   
-    return entities.map((entity) => {
-      return () => {
-        const result = this.hass?.connection.subscribeEvents(
-          (event: any) => {
-            if (event.data.entity_id === entity) {
-              this._handleStateChange(event.data.entity_id, event.data.new_state);
-            }
-          },
-          'state_changed'
-        );
-        if (!result) return Promise.resolve(() => {});
-        return result instanceof Promise ? result : Promise.resolve(result);
-      };
-    });
-  }
-
-  private _handleStateChange(entityId: string, newState: { state?: string } | null): void {
-    if (
-      entityId === this._config?.mode_entity &&
-      newState?.state &&
-      newState.state !== 'unknown'
-    ) {
-      this._selectedModeName = newState.state;
-    }
-    this.requestUpdate();
   }
 
   protected render(): TemplateResult {
@@ -189,56 +194,75 @@ export class SkyCookerHaCard extends SubscribeMixin {
      `;
    }
  
-   return this._renderUnifiedDesign();
+   return this._config.new_design
+     ? this._renderModernDesign()
+     : this._renderClassicDesign();
   }
 
-  private _renderUnifiedDesign(): TemplateResult {
+  private _renderClassicDesign(): TemplateResult {
     return html`
-  <ha-card class="new-design new-design-v2">
-    ${renderSkyCookerHeader(
-      this._config!,
-      this.hass,
-      this._config!.status_entity,
-      true
-    )}
-    
-    ${this._renderUnifiedStateBlock()}
-    
-    <div class="new-controls-grid">
-    ${renderSkyCookerModeSelector({
-         config: this._config!,
-         hass: this.hass,
-         t: this._t.bind(this),
-         getSelectedTime: () => this._getSelectedTime(),
-         showCurrentStatusLine: false,
-         onSelectChange: (entityId: string, ev: Event) =>
-           this._handleSelectChange(entityId, ev),
-       } as any)}
-    </div>
-    
-    ${renderSkyCookerActionButtons(
-      this._config!,
-      this._t.bind(this),
-      this._handleButtonPress.bind(this)
-    )}
-    
-    ${renderSkyCookerAdditionalControls(
-      this._config!,
-      this.hass,
-      this._t.bind(this),
-      this._additionalExpanded,
-      () => {
-        this._additionalExpanded = !this._additionalExpanded;
-      },
-      this._handleSelectChange.bind(this),
-      this._handleSwitchChange.bind(this)
-    )}
-    
-  </ha-card>
-`;
+      <ha-card class="design-classic">
+        ${this._renderCardBody('classic')}
+      </ha-card>
+    `;
   }
 
-  private _renderUnifiedStateBlock(): TemplateResult {
+  private _renderModernDesign(): TemplateResult {
+    return html`
+      <ha-card class="design-modern">
+        ${this._renderCardBody('modern')}
+      </ha-card>
+    `;
+  }
+
+  private _renderCardBody(design: CardDesign): TemplateResult {
+    return html`
+      ${renderSkyCookerHeader(
+        this._config!,
+        this.hass,
+        this._config!.status_entity,
+        true,
+        design
+      )}
+
+      ${this._renderStateBlock(design)}
+
+      <div class="new-controls-grid">
+        ${renderSkyCookerModeSelector({
+          config: this._config!,
+          hass: this.hass,
+          t: this._t.bind(this),
+          getSelectedTime: () => this._getSelectedTime(),
+          showCurrentStatusLine: false,
+          design,
+          onSelectChange: (entityId: string, ev: Event) =>
+            this._handleSelectChange(entityId, ev),
+        })}
+      </div>
+
+      ${renderSkyCookerActionButtons(
+        this._config!,
+        this._t.bind(this),
+        this._handleButtonPress.bind(this),
+        design
+      )}
+
+      ${renderSkyCookerAdditionalControls(
+        this._config!,
+        this.hass,
+        this._t.bind(this),
+        this._additionalExpanded,
+        () => {
+          this._additionalExpanded = !this._additionalExpanded;
+        },
+        this._handleSelectChange.bind(this),
+        this._handleSwitchChange.bind(this),
+        design
+      )}
+    `;
+  }
+
+  private _renderStateBlock(design: CardDesign): TemplateResult {
     const statusState = this._config?.status_entity && this.hass
       ? (this.hass.states[this._config.status_entity]?.state ?? '')
       : '';
@@ -248,7 +272,8 @@ export class SkyCookerHaCard extends SubscribeMixin {
     return renderSkyCookerStatusBlock(
       this._config!,
       this.hass,
-      this._t.bind(this)
+      this._t.bind(this),
+      design
     );
   }
 
@@ -278,14 +303,6 @@ export class SkyCookerHaCard extends SubscribeMixin {
   private _handleSelectChange(entityId: string, ev: any): void {
     if (!this._config || !this.hass || !entityId) return;
     
-    // eslint-disable-next-line no-console
-    console.log('[SkyCooker Card] _handleSelectChange event', {
-      entityId,
-      detail: ev?.detail,
-      targetValue: ev?.target?.value,
-      selectedValue: ev?.target?.selected?.value,
-    });
-
     let value =
       ev?.detail?.value ??
       ev?.target?.value ??

@@ -3,19 +3,25 @@ import type { HomeAssistant } from '../types';
 import type { SkycookerConfig } from '../config';
 import { isStatusOff } from '../status-utils';
 
+export type CardDesign = 'classic' | 'modern';
+
 export function renderSkyCookerHeader(
   config: SkycookerConfig,
   hass: HomeAssistant | undefined,
   statusEntityId: string | undefined,
-  showStatusText?: boolean
+  showStatusText?: boolean,
+  design: CardDesign = 'classic'
 ): TemplateResult {
   const statusState =
     statusEntityId && hass ? hass.states[statusEntityId]?.state ?? '' : '';
   const isOff = isStatusOff(statusState);
   const isActive = statusState && !isOff;
 
+  const headerClass =
+    design === 'modern' ? 'new-header modern-header' : 'new-header';
+
   return html`
-    <div class="new-header">
+    <div class="${headerClass}">
       <div class="new-icon">
         <ha-icon .icon=${config.icon || 'mdi:stove'}></ha-icon>
       </div>

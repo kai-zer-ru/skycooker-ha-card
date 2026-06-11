@@ -1,13 +1,20 @@
 import { html, type TemplateResult } from 'lit';
 import type { SkycookerConfig } from '../config';
+import type { CardDesign } from './skycooker-header';
 
 export function renderSkyCookerActionButtons(
   config: SkycookerConfig,
   t: (key: string) => string,
-  onButtonPress: (entityId: string) => void
+  onButtonPress: (entityId: string) => void,
+  design: CardDesign = 'classic'
 ): TemplateResult {
+  const buttonsClass =
+    design === 'modern'
+      ? 'new-action-buttons modern-action-bar'
+      : 'new-action-buttons';
+
   return html`
-    <div class="new-action-buttons">
+    <div class="${buttonsClass}">
       ${config.start_entity
         ? html`
             <ha-button

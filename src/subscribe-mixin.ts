@@ -39,8 +39,15 @@ export class SubscribeMixin extends LitElement {
     changedProperties: Map<string, unknown>
   ): void {
     super.updated?.(changedProperties);
-    if (changedProperties.has('hass') || changedProperties.has('_config')) {
+    if (changedProperties.has('_config')) {
       this._setupSubscriptions();
+      return;
+    }
+    if (changedProperties.has('hass')) {
+      const oldHass = changedProperties.get('hass') as HomeAssistant | undefined;
+      if (!oldHass && this.hass) {
+        this._setupSubscriptions();
+      }
     }
   }
 

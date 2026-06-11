@@ -79,53 +79,6 @@ const i=(i,e)=>"method"===e.kind&&e.descriptor&&!("value"in e.descriptor)?{...e,
  * SPDX-License-Identifier: BSD-3-Clause
  */var n;null!=(null===(n=window.HTMLSlotElement)||void 0===n?void 0:n.prototype.assignedElements)?(o,n)=>o.assignedElements(n):(o,n)=>o.assignedNodes(n).filter((o=>o.nodeType===Node.ELEMENT_NODE));
 
-class SubscribeMixin extends s {
-    constructor() {
-        super(...arguments);
-        this._unsubscribeFuncs = [];
-        this._setupVersion = 0;
-    }
-    hassSubscribe() {
-        return [];
-    }
-    async _setupSubscriptions() {
-        this._unsubscribeAll();
-        const version = ++this._setupVersion;
-        if (this.hass) {
-            const subscriptions = this.hassSubscribe();
-            const funcs = await Promise.all(subscriptions.map((subscription) => subscription()));
-            if (version !== this._setupVersion)
-                return;
-            this._unsubscribeFuncs = funcs;
-        }
-    }
-    _unsubscribeAll() {
-        this._unsubscribeFuncs.forEach((unsubscribe) => {
-            if (unsubscribe && typeof unsubscribe === 'function') {
-                unsubscribe();
-            }
-        });
-        this._unsubscribeFuncs = [];
-    }
-    updated(changedProperties) {
-        super.updated?.(changedProperties);
-        if (changedProperties.has('hass') || changedProperties.has('_config')) {
-            this._setupSubscriptions();
-        }
-    }
-    async connectedCallback() {
-        super.connectedCallback();
-        await this._setupSubscriptions();
-    }
-    disconnectedCallback() {
-        this._unsubscribeAll();
-        super.disconnectedCallback();
-    }
-}
-__decorate([
-    n$1({ attribute: false })
-], SubscribeMixin.prototype, "hass", void 0);
-
 var title$1 = "Skycooker Card";
 var description$1 = "A card for managing Skycooker devices.";
 var remaining$1 = "Remaining";
@@ -179,6 +132,7 @@ var all_modes$1 = "All Programs";
 var standby_mode$1 = "Standby Mode";
 var auto_fill$1 = "Auto-fill by device";
 var skycooker_instance$1 = "SkyCooker instance";
+var new_design$1 = "New design";
 var enTranslations = {
 	title: title$1,
 	description: description$1,
@@ -232,7 +186,8 @@ var enTranslations = {
 	all_modes: all_modes$1,
 	standby_mode: standby_mode$1,
 	auto_fill: auto_fill$1,
-	skycooker_instance: skycooker_instance$1
+	skycooker_instance: skycooker_instance$1,
+	new_design: new_design$1
 };
 
 var title = "Карточка SkyCooker";
@@ -288,6 +243,7 @@ var all_modes = "Все программы";
 var standby_mode = "Режим ожидания";
 var auto_fill = "Автозаполнить по устройству";
 var skycooker_instance = "Экземпляр SkyCooker";
+var new_design = "Новый дизайн";
 var ruTranslations = {
 	title: title,
 	description: description,
@@ -341,7 +297,8 @@ var ruTranslations = {
 	all_modes: all_modes,
 	standby_mode: standby_mode,
 	auto_fill: auto_fill,
-	skycooker_instance: skycooker_instance
+	skycooker_instance: skycooker_instance,
+	new_design: new_design
 };
 
 // Файл локализации для skycooker-ha-card
@@ -406,6 +363,7 @@ const DEFAULT_CONFIG = {
     name: 'SkyCooker',
     icon: 'mdi:stove',
     language: 'ru',
+    new_design: false,
     mode_entity: '',
     additional_mode_entity: '',
     cooking_time_hours_entity: '',
@@ -440,6 +398,7 @@ function normalizeConfig(config, hass) {
         name: config.name ?? DEFAULT_CONFIG.name,
         icon: config.icon ?? DEFAULT_CONFIG.icon,
         language: lang,
+        new_design: config.new_design ?? DEFAULT_CONFIG.new_design,
         mode_entity: config.mode_entity ?? '',
         additional_mode_entity: config.additional_mode_entity ?? '',
         cooking_time_hours_entity: config.cooking_time_hours_entity ?? '',
@@ -850,12 +809,13 @@ function shouldShowDelayedLaunchTime(status, hasDelayedLaunchEntity) {
     return (STATUS_DELAYED_LAUNCH.includes(status) && hasDelayedLaunchEntity);
 }
 
-function renderSkyCookerHeader(config, hass, statusEntityId, showStatusText) {
+function renderSkyCookerHeader(config, hass, statusEntityId, showStatusText, design = 'classic') {
     const statusState = statusEntityId && hass ? hass.states[statusEntityId]?.state ?? '' : '';
     const isOff = isStatusOff(statusState);
     const isActive = statusState && !isOff;
+    const headerClass = design === 'modern' ? 'new-header modern-header' : 'new-header';
     return x `
-    <div class="new-header">
+    <div class="${headerClass}">
       <div class="new-icon">
         <ha-icon .icon=${config.icon || 'mdi:stove'}></ha-icon>
       </div>
@@ -882,9 +842,12 @@ function renderSkyCookerHeader(config, hass, statusEntityId, showStatusText) {
   `;
 }
 
-function renderSkyCookerActionButtons(config, t, onButtonPress) {
+function renderSkyCookerActionButtons(config, t, onButtonPress, design = 'classic') {
+    const buttonsClass = design === 'modern'
+        ? 'new-action-buttons modern-action-bar'
+        : 'new-action-buttons';
     return x `
-    <div class="new-action-buttons">
+    <div class="${buttonsClass}">
       ${config.start_entity
         ? x `
             <ha-button
@@ -909,7 +872,7 @@ function renderSkyCookerActionButtons(config, t, onButtonPress) {
   `;
 }
 
-function renderSkyCookerStatusBlock(config, hass, t) {
+function renderSkyCookerStatusBlock(config, hass, t, design = 'classic') {
     const temperatureEntity = config.cooking_temperature_entity || config.temperature_entity;
     const showTemp = shouldShowTemperature(getEntityState(hass, config.current_mode_entity), getEntityState(hass, config.status_entity));
     const showAutoWarmTime = shouldShowAutoWarmTime(getEntityState(hass, config.status_entity), !!config.auto_warm_time_entity);
@@ -932,11 +895,18 @@ function renderSkyCookerStatusBlock(config, hass, t) {
     const soundEnabled = soundEnabledRaw === 'on' ||
         soundEnabledRaw === 'true' ||
         soundEnabledRaw === 'True';
+    const groupClass = design === 'modern'
+        ? 'new-control-group modern-metrics-panel'
+        : 'new-control-group';
+    const sensorsClass = design === 'modern'
+        ? 'new-time-sensors-container modern-metrics-grid'
+        : 'new-time-sensors-container';
+    const itemClass = design === 'modern' ? 'new-control-item modern-metric' : 'new-control-item';
     return x `
-    <div class="new-control-group">
+    <div class="${groupClass}">
       ${showTemp && temperatureEntity
         ? x `
-            <div class="new-control-item">
+            <div class="${itemClass} modern-metric-featured">
               <ha-icon icon="mdi:thermometer" class="new-control-icon"></ha-icon>
               <div class="new-control-content">
                 <div class="new-control-label">${t('temperature')}</div>
@@ -947,9 +917,9 @@ function renderSkyCookerStatusBlock(config, hass, t) {
             </div>
           `
         : ''}
-      <div class="new-time-sensors-container">
+      <div class="${sensorsClass}">
         <div class="new-time-sensors-row">
-          <div class="new-control-item">
+          <div class="${itemClass}">
             <div class="new-control-label">${t('remaining')}</div>
             <div class="new-control-icon-value">
               <ha-icon icon="mdi:timer" class="new-control-icon"></ha-icon>
@@ -958,7 +928,7 @@ function renderSkyCookerStatusBlock(config, hass, t) {
               </div>
             </div>
           </div>
-          <div class="new-control-item">
+          <div class="${itemClass}">
             <div class="new-control-label">${t('cooking_time_label')}</div>
             <div class="new-control-icon-value">
               <ha-icon icon="mdi:clock" class="new-control-icon"></ha-icon>
@@ -971,7 +941,7 @@ function renderSkyCookerStatusBlock(config, hass, t) {
         <div class="new-time-sensors-row">
           ${showAutoWarmTime && config.auto_warm_time_entity
         ? x `
-                <div class="new-control-item">
+                <div class="${itemClass}">
                   <div class="new-control-label">${t('auto_warm_time')}</div>
                   <div class="new-control-icon-value">
                     <ha-icon
@@ -987,7 +957,7 @@ function renderSkyCookerStatusBlock(config, hass, t) {
         : ''}
           ${showDelayedLaunchTime && config.delayed_launch_time_entity
         ? x `
-                <div class="new-control-item">
+                <div class="${itemClass}">
                   <div class="new-control-label">${t('delayed_launch')}</div>
                   <div class="new-control-icon-value">
                     <ha-icon
@@ -1007,7 +977,7 @@ function renderSkyCookerStatusBlock(config, hass, t) {
               <div class="new-time-sensors-row">
                 ${hasSuccessRate
             ? x `
-                      <div class="new-control-item">
+                      <div class="${itemClass}">
                         <div class="new-control-label">
                           ${t('success_rate')}
                         </div>
@@ -1025,7 +995,7 @@ function renderSkyCookerStatusBlock(config, hass, t) {
             : ''}
                 ${hasErrorCode
             ? x `
-                      <div class="new-control-item">
+                      <div class="${itemClass}">
                         <div class="new-control-label">${t('error_code')}</div>
                         <div class="new-control-icon-value">
                           <ha-icon
@@ -1041,7 +1011,7 @@ function renderSkyCookerStatusBlock(config, hass, t) {
             : ''}
                 ${hasSoundEnabled
             ? x `
-                      <div class="new-control-item">
+                      <div class="${itemClass}">
                         <div class="new-control-label">
                           ${t('sound_enabled')}
                         </div>
@@ -1067,10 +1037,15 @@ function renderSkyCookerStatusBlock(config, hass, t) {
   `;
 }
 
-function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, onSelectChange, onSwitchChange) {
+function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, onSelectChange, onSwitchChange, design = 'classic') {
     const temperatureEntity = config.cooking_temperature_entity || config.temperature_entity;
+    const panelClass = design === 'modern'
+        ? 'new-additional-controls modern-settings-panel'
+        : 'new-additional-controls';
+    const sectionClass = design === 'modern' ? 'modern-setting-block' : '';
+    const labelClass = design === 'modern' ? 'modern-setting-label' : '';
     return x `
-    <div class="new-additional-controls">
+    <div class="${panelClass}">
       <div class="new-section-header" @click=${onToggle}>
         <ha-icon icon="mdi:cog"></ha-icon>
         <span>${t('additional_settings')}</span>
@@ -1080,13 +1055,12 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
         ></ha-icon>
       </div>
       <div
-        class="new-additional-content"
-        style="display: ${expanded ? 'block' : 'none'};"
+        class="new-additional-content ${expanded ? 'is-expanded' : ''}"
       >
         ${config.additional_mode_entity && hass
         ? x `
-              <div class="new-cooking-time-section">
-                <div class="new-cooking-time-header">
+              <div class="new-cooking-time-section ${sectionClass}">
+                <div class="new-cooking-time-header ${labelClass}">
                   <ha-icon icon="mdi:cog-outline"></ha-icon>
                   <span class="new-cooking-time-label">
                     ${t('additional_mode')}
@@ -1109,10 +1083,19 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
         : ''}
         ${config.auto_warm_entity
         ? x `
-              <div class="new-auto-warm-section">
+              <div class="new-auto-warm-section ${sectionClass}">
                 <div class="new-auto-warm-header">
-                  <ha-icon icon="mdi:heat-wave"></ha-icon>
-                  <span class="new-auto-warm-label">${t('auto_warm')}</span>
+                  ${design === 'modern'
+            ? x `
+                        <div class="${labelClass}">
+                          <ha-icon icon="mdi:heat-wave"></ha-icon>
+                          <span class="new-auto-warm-label">${t('auto_warm')}</span>
+                        </div>
+                      `
+            : x `
+                        <ha-icon icon="mdi:heat-wave"></ha-icon>
+                        <span class="new-auto-warm-label">${t('auto_warm')}</span>
+                      `}
                   <ha-switch
                     .checked=${getEntityState(hass, config.auto_warm_entity) ===
             'on'}
@@ -1124,8 +1107,8 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
         : ''}
         ${temperatureEntity && hass
         ? x `
-              <div class="new-temperature-section">
-                <div class="new-temperature-header">
+              <div class="new-temperature-section ${sectionClass}">
+                <div class="new-temperature-header ${labelClass}">
                   <ha-icon icon="mdi:thermometer"></ha-icon>
                   <span class="new-temperature-label">
                     ${t('temperature')}
@@ -1136,12 +1119,6 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
                     style="width: 100%;"
                     .value=${getEntityState(hass, temperatureEntity)}
                     @selected=${(ev) => {
-            // eslint-disable-next-line no-console
-            console.log('[SkyCooker Card] temperature select @selected', {
-                entityId: temperatureEntity,
-                detail: ev.detail,
-                targetValue: ev.target?.value,
-            });
             onSelectChange(temperatureEntity, ev);
         }}
                     @closed=${(ev) => ev.stopPropagation()}
@@ -1156,8 +1133,8 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
         config.cooking_time_minutes_entity &&
         hass
         ? x `
-              <div class="new-cooking-time-section">
-                <div class="new-cooking-time-header">
+              <div class="new-cooking-time-section ${sectionClass}">
+                <div class="new-cooking-time-header ${labelClass}">
                   <ha-icon icon="mdi:clock"></ha-icon>
                   <span class="new-cooking-time-label">
                     ${t('cooking_time_label')}
@@ -1168,12 +1145,6 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
                     style="width: 100%;"
                     .value=${getEntityState(hass, config.cooking_time_hours_entity)}
                     @selected=${(ev) => {
-            // eslint-disable-next-line no-console
-            console.log('[SkyCooker Card] cooking_time_hours select @selected', {
-                entityId: config.cooking_time_hours_entity,
-                detail: ev.detail,
-                targetValue: ev.target?.value,
-            });
             onSelectChange(config.cooking_time_hours_entity, ev);
         }}
                     @closed=${(ev) => ev.stopPropagation()}
@@ -1184,12 +1155,6 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
                     style="width: 100%;"
                     .value=${getEntityState(hass, config.cooking_time_minutes_entity)}
                     @selected=${(ev) => {
-            // eslint-disable-next-line no-console
-            console.log('[SkyCooker Card] cooking_time_minutes select @selected', {
-                entityId: config.cooking_time_minutes_entity,
-                detail: ev.detail,
-                targetValue: ev.target?.value,
-            });
             onSelectChange(config.cooking_time_minutes_entity, ev);
         }}
                     @closed=${(ev) => ev.stopPropagation()}
@@ -1204,8 +1169,8 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
         config.delayed_start_minutes_entity &&
         hass
         ? x `
-              <div class="new-cooking-time-section">
-                <div class="new-cooking-time-header">
+              <div class="new-cooking-time-section ${sectionClass}">
+                <div class="new-cooking-time-header ${labelClass}">
                   <ha-icon icon="mdi:timer-sand"></ha-icon>
                   <span class="new-cooking-time-label">
                     ${t('delayed_start')}
@@ -1216,12 +1181,6 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
                     style="width: 100%;"
                     .value=${getEntityState(hass, config.delayed_start_hours_entity)}
                     @selected=${(ev) => {
-            // eslint-disable-next-line no-console
-            console.log('[SkyCooker Card] delayed_start_hours select @selected', {
-                entityId: config.delayed_start_hours_entity,
-                detail: ev.detail,
-                targetValue: ev.target?.value,
-            });
             onSelectChange(config.delayed_start_hours_entity, ev);
         }}
                     @closed=${(ev) => ev.stopPropagation()}
@@ -1232,12 +1191,6 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
                     style="width: 100%;"
                     .value=${getEntityState(hass, config.delayed_start_minutes_entity)}
                     @selected=${(ev) => {
-            // eslint-disable-next-line no-console
-            console.log('[SkyCooker Card] delayed_start_minutes select @selected', {
-                entityId: config.delayed_start_minutes_entity,
-                detail: ev.detail,
-                targetValue: ev.target?.value,
-            });
             onSelectChange(config.delayed_start_minutes_entity, ev);
         }}
                     @closed=${(ev) => ev.stopPropagation()}
@@ -1254,11 +1207,17 @@ function renderSkyCookerAdditionalControls(config, hass, t, expanded, onToggle, 
 }
 
 function renderSkyCookerModeSelector(params) {
-    const { config, hass, t, getSelectedTime, showCurrentStatusLine = true, } = params;
+    const { config, hass, t, getSelectedTime, showCurrentStatusLine = true, design = 'classic', } = params;
     const getEntityStateLocal = (entityId) => entityId ? getEntityState(hass, entityId) : '';
+    const groupClass = design === 'modern'
+        ? 'new-control-group modern-program-panel'
+        : 'new-control-group';
+    const selectorClass = design === 'modern' ? 'new-mode-selector modern-mode-selector' : 'new-mode-selector';
+    const summaryClass = design === 'modern' ? 'modern-selection-summary' : 'classic-selection-summary';
     return x `
-    <div class="new-control-group">
-      <div class="new-mode-selector">
+    <div class="${groupClass}">
+      <div class="${selectorClass}">
+        <div class="${summaryClass}">
         ${showCurrentStatusLine
         ? x `
               <div class="new-mode-label" style="text-align: center;">
@@ -1276,7 +1235,9 @@ function renderSkyCookerModeSelector(params) {
             </div>`
         : ''}
         <div class="new-selected-time">
-          ${t('selected_time')}: <span class="selected-time-text">${getSelectedTime() || '-----'}</span>
+          ${t('selected_time')}:
+          <span class="selected-time-text">${getSelectedTime() || '-----'}</span>
+        </div>
         </div>
 
         ${config.favorite_modes_entity &&
@@ -1291,12 +1252,6 @@ function renderSkyCookerModeSelector(params) {
                   style="width: 100%;"
                   .value=${getEntityStateLocal(config.mode_entity)}
                   @selected=${(ev) => {
-            // eslint-disable-next-line no-console
-            console.log('[SkyCooker Card] favorite select @selected', {
-                entityId: config.mode_entity,
-                detail: ev.detail,
-                targetValue: ev.target?.value,
-            });
             params.onSelectChange?.(config.mode_entity, ev);
         }}
                   @closed=${(ev) => ev.stopPropagation()}
@@ -1317,12 +1272,6 @@ function renderSkyCookerModeSelector(params) {
                   style="width: 100%;"
                   .value=${getEntityStateLocal(config.mode_entity)}
                   @selected=${(ev) => {
-            // eslint-disable-next-line no-console
-            console.log('[SkyCooker Card] mode select @selected', {
-                entityId: config.mode_entity,
-                detail: ev.detail,
-                targetValue: ev.target?.value,
-            });
             params.onSelectChange?.(config.mode_entity, ev);
         }}
                   @closed=${(ev) => ev.stopPropagation()}
@@ -1403,21 +1352,21 @@ const skycookerCardStyles = i$2 `
     font-size: 16px;
   }
 
-  ha-card.new-design {
+  ha-card.design-classic {
     padding: 12px;
-    gap: 12px;
+    gap: 14px;
     background: var(--skycooker-bg);
     border-radius: var(--ha-card-border-radius, 16px);
     box-shadow: var(--skycooker-shadow);
     overflow: hidden;
   }
 
-  ha-card.new-design.new-design-v2 {
-    gap: 14px;
+  .design-classic .new-controls-grid {
+    margin-top: 2px;
   }
 
-  .new-design-v2 .new-controls-grid {
-    margin-top: 2px;
+  .design-classic .classic-selection-summary {
+    display: contents;
   }
 
   /* Заголовок: рамка с отступом от края, как у остальных блоков */
@@ -1633,11 +1582,15 @@ const skycookerCardStyles = i$2 `
   }
 
   .new-additional-content {
-    display: flex;
+    display: none;
     flex-direction: column;
     gap: 10px;
     padding: 12px 0;
     border-top: 1px solid var(--skycooker-border);
+  }
+
+  .new-additional-content.is-expanded {
+    display: flex;
   }
 
   .new-auto-warm-section {
@@ -1819,9 +1772,278 @@ const skycookerCardStyles = i$2 `
     gap: 8px;
   }
 
+  /* ——— Современный дизайн ——— */
+  ha-card.design-modern {
+    padding: 18px 20px;
+    gap: 18px;
+    background: var(--skycooker-bg);
+    border-radius: var(--ha-card-border-radius, 20px);
+    box-shadow: var(--skycooker-shadow);
+    overflow: hidden;
+  }
+
+  .design-modern .modern-header {
+    flex-direction: row;
+    align-items: center;
+    gap: 14px;
+    padding: 0;
+    border: none;
+    background: transparent;
+  }
+
+  .design-modern .modern-header .new-icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--skycooker-accent) 14%, transparent);
+  }
+
+  .design-modern .modern-header .new-summary {
+    flex: 1;
+    align-items: flex-start;
+    text-align: left;
+  }
+
+  .design-modern .modern-header .new-name {
+    font-size: 1.15rem;
+    line-height: 1.2;
+  }
+
+  .design-modern .modern-header .new-header-status-text {
+    margin-top: 2px;
+    font-size: 0.82rem;
+  }
+
+  .design-modern .modern-header .new-status-indicator {
+    margin-left: auto;
+    flex-shrink: 0;
+  }
+
+  .design-modern .modern-metrics-panel {
+    border: none;
+    padding: 0;
+    background: transparent;
+    gap: 10px;
+  }
+
+  .design-modern .modern-metric-featured {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: color-mix(in srgb, var(--skycooker-accent) 10%, var(--secondary-background-color, transparent));
+  }
+
+  .design-modern .modern-metric-featured .new-control-value {
+    font-size: 1.35rem;
+    font-weight: 600;
+  }
+
+  .design-modern .modern-metrics-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .design-modern .modern-metrics-grid .new-time-sensors-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 8px;
+    justify-content: stretch;
+  }
+
+  .design-modern .modern-metric {
+    align-items: flex-start;
+    gap: 6px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--secondary-background-color, rgba(128, 128, 128, 0.08));
+  }
+
+  .design-modern .modern-metric .new-control-label {
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    opacity: 0.85;
+  }
+
+  .design-modern .modern-metric .new-control-icon-value {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .design-modern .modern-metric .new-control-value {
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+
+  .design-modern .modern-program-panel {
+    border: none;
+    padding: 0;
+    background: transparent;
+    gap: 12px;
+  }
+
+  .design-modern .modern-selection-summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+
+  .design-modern .modern-selection-summary .new-selected-mode,
+  .design-modern .modern-selection-summary .new-selected-time {
+    text-align: left;
+    margin: 0;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--secondary-background-color, rgba(128, 128, 128, 0.08));
+    font-size: 0.82rem;
+    line-height: 1.35;
+  }
+
+  .design-modern .modern-selection-summary .selected-mode-text,
+  .design-modern .modern-selection-summary .selected-time-text {
+    display: block;
+    margin: 4px 0 0;
+    font-size: 0.98rem;
+  }
+
+  .design-modern .modern-mode-selector .new-mode-select {
+    margin-top: 10px;
+  }
+
+  .design-modern .modern-mode-selector .new-control-label {
+    margin-bottom: 4px;
+    font-weight: 500;
+  }
+
+  .design-modern .modern-action-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    padding: 0;
+    border: none;
+    background: transparent;
+  }
+
+  .design-modern .modern-action-bar ha-button {
+    width: 100%;
+    --mdc-theme-primary: var(--skycooker-accent);
+  }
+
+  .design-modern .modern-settings-panel {
+    margin-top: 2px;
+    padding: 14px 0 0;
+    border: none;
+    border-top: 1px solid var(--skycooker-border);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .design-modern .modern-settings-panel .new-section-header {
+    padding: 0 0 8px;
+  }
+
+  .design-modern .modern-settings-panel .new-section-header span {
+    font-weight: 500;
+    color: var(--skycooker-text-secondary);
+  }
+
+  .design-modern .modern-settings-panel .new-additional-content.is-expanded {
+    padding: 16px 0 4px;
+    gap: 20px;
+    border-top: none;
+  }
+
+  .design-modern .modern-setting-block {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .design-modern .modern-setting-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-start;
+    width: 100%;
+    text-align: left;
+  }
+
+  .design-modern .modern-setting-label ha-icon {
+    flex-shrink: 0;
+    font-size: 20px;
+    color: var(--skycooker-accent);
+  }
+
+  .design-modern .modern-settings-panel .new-auto-warm-label,
+  .design-modern .modern-settings-panel .new-temperature-label,
+  .design-modern .modern-settings-panel .new-cooking-time-label {
+    font-size: var(--card-primary-font-size, 14px);
+    font-weight: 500;
+    text-align: left;
+  }
+
+  .design-modern .modern-settings-panel .new-auto-warm-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+  }
+
+  .design-modern .modern-settings-panel .new-temperature-header,
+  .design-modern .modern-settings-panel .new-cooking-time-header {
+    justify-content: flex-start;
+  }
+
+  .design-modern .modern-settings-panel .new-temperature-controls,
+  .design-modern .modern-settings-panel .new-cooking-time-controls {
+    display: grid;
+    width: 100%;
+    gap: 10px;
+    justify-content: stretch;
+    align-items: stretch;
+    padding: 0;
+    margin: 0;
+  }
+
+  .design-modern .modern-settings-panel .new-temperature-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .design-modern .modern-settings-panel .new-cooking-time-controls {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .design-modern .modern-settings-panel .new-temperature-controls ha-select,
+  .design-modern .modern-settings-panel .new-cooking-time-controls ha-select {
+    width: 100%;
+    min-width: 0;
+  }
+
+  @media (max-width: 420px) {
+    .design-modern .modern-selection-summary {
+      grid-template-columns: 1fr;
+    }
+
+    .design-modern .modern-action-bar {
+      grid-template-columns: 1fr;
+    }
+  }
+
 `;
 
-let SkyCookerHaCard = class SkyCookerHaCard extends SubscribeMixin {
+let SkyCookerHaCard = class SkyCookerHaCard extends s {
     constructor() {
         super(...arguments);
         this._selectedMode = 'favorite'; // По умолчанию избранные режимы
@@ -1885,8 +2107,34 @@ let SkyCookerHaCard = class SkyCookerHaCard extends SubscribeMixin {
         this.removeEventListener('config-changed', this._configChangedHandler);
         super.disconnectedCallback();
     }
+    _getTrackedEntityIds() {
+        if (!this._config)
+            return [];
+        return CONFIG_ENTITY_KEYS.map((key) => this._config[key]).filter((entity) => !!entity);
+    }
+    shouldUpdate(changedProperties) {
+        if (changedProperties.has('_config') ||
+            changedProperties.has('_selectedMode') ||
+            changedProperties.has('_selectedModeName') ||
+            changedProperties.has('_additionalExpanded')) {
+            return true;
+        }
+        if (!changedProperties.has('hass')) {
+            return false;
+        }
+        const oldHass = changedProperties.get('hass');
+        if (!oldHass || !this.hass) {
+            return true;
+        }
+        for (const entityId of this._getTrackedEntityIds()) {
+            if (oldHass.states[entityId] !== this.hass.states[entityId]) {
+                return true;
+            }
+        }
+        return false;
+    }
     updated(changedProperties) {
-        super.updated?.(changedProperties);
+        super.updated(changedProperties);
         if (changedProperties.has('hass') || changedProperties.has('_config')) {
             // Инициализируем вкладку по умолчанию только когда hass только что появился (при первой загрузке).
             // Иначе при каждом обновлении hass перезаписывали бы выбор пользователя «Все программы».
@@ -1898,32 +2146,6 @@ let SkyCookerHaCard = class SkyCookerHaCard extends SubscribeMixin {
                 this._syncSelectedModeFromEntity();
             }
         }
-    }
-    hassSubscribe() {
-        if (!this._config || !this.hass)
-            return [];
-        const entities = CONFIG_ENTITY_KEYS.map((key) => this._config[key])
-            .filter((entity) => !!entity);
-        return entities.map((entity) => {
-            return () => {
-                const result = this.hass?.connection.subscribeEvents((event) => {
-                    if (event.data.entity_id === entity) {
-                        this._handleStateChange(event.data.entity_id, event.data.new_state);
-                    }
-                }, 'state_changed');
-                if (!result)
-                    return Promise.resolve(() => { });
-                return result instanceof Promise ? result : Promise.resolve(result);
-            };
-        });
-    }
-    _handleStateChange(entityId, newState) {
-        if (entityId === this._config?.mode_entity &&
-            newState?.state &&
-            newState.state !== 'unknown') {
-            this._selectedModeName = newState.state;
-        }
-        this.requestUpdate();
     }
     render() {
         if (!this._config || !this.hass) {
@@ -1952,43 +2174,57 @@ let SkyCookerHaCard = class SkyCookerHaCard extends SubscribeMixin {
        </ha-card>
      `;
         }
-        return this._renderUnifiedDesign();
+        return this._config.new_design
+            ? this._renderModernDesign()
+            : this._renderClassicDesign();
     }
-    _renderUnifiedDesign() {
+    _renderClassicDesign() {
         return x `
-  <ha-card class="new-design new-design-v2">
-    ${renderSkyCookerHeader(this._config, this.hass, this._config.status_entity)}
-    
-    ${this._renderUnifiedStateBlock()}
-    
-    <div class="new-controls-grid">
-    ${renderSkyCookerModeSelector({
+      <ha-card class="design-classic">
+        ${this._renderCardBody('classic')}
+      </ha-card>
+    `;
+    }
+    _renderModernDesign() {
+        return x `
+      <ha-card class="design-modern">
+        ${this._renderCardBody('modern')}
+      </ha-card>
+    `;
+    }
+    _renderCardBody(design) {
+        return x `
+      ${renderSkyCookerHeader(this._config, this.hass, this._config.status_entity, true, design)}
+
+      ${this._renderStateBlock(design)}
+
+      <div class="new-controls-grid">
+        ${renderSkyCookerModeSelector({
             config: this._config,
             hass: this.hass,
             t: this._t.bind(this),
             getSelectedTime: () => this._getSelectedTime(),
             showCurrentStatusLine: false,
+            design,
             onSelectChange: (entityId, ev) => this._handleSelectChange(entityId, ev),
         })}
-    </div>
-    
-    ${renderSkyCookerActionButtons(this._config, this._t.bind(this), this._handleButtonPress.bind(this))}
-    
-    ${renderSkyCookerAdditionalControls(this._config, this.hass, this._t.bind(this), this._additionalExpanded, () => {
+      </div>
+
+      ${renderSkyCookerActionButtons(this._config, this._t.bind(this), this._handleButtonPress.bind(this), design)}
+
+      ${renderSkyCookerAdditionalControls(this._config, this.hass, this._t.bind(this), this._additionalExpanded, () => {
             this._additionalExpanded = !this._additionalExpanded;
-        }, this._handleSelectChange.bind(this), this._handleSwitchChange.bind(this))}
-    
-  </ha-card>
-`;
+        }, this._handleSelectChange.bind(this), this._handleSwitchChange.bind(this), design)}
+    `;
     }
-    _renderUnifiedStateBlock() {
+    _renderStateBlock(design) {
         const statusState = this._config?.status_entity && this.hass
             ? (this.hass.states[this._config.status_entity]?.state ?? '')
             : '';
         if (isStatusOff(statusState)) {
             return x ``;
         }
-        return renderSkyCookerStatusBlock(this._config, this.hass, this._t.bind(this));
+        return renderSkyCookerStatusBlock(this._config, this.hass, this._t.bind(this), design);
     }
     _getEntityState(entityId) {
         return getEntityState(this.hass, entityId);
@@ -2011,13 +2247,6 @@ let SkyCookerHaCard = class SkyCookerHaCard extends SubscribeMixin {
     _handleSelectChange(entityId, ev) {
         if (!this._config || !this.hass || !entityId)
             return;
-        // eslint-disable-next-line no-console
-        console.log('[SkyCooker Card] _handleSelectChange event', {
-            entityId,
-            detail: ev?.detail,
-            targetValue: ev?.target?.value,
-            selectedValue: ev?.target?.selected?.value,
-        });
         let value = ev?.detail?.value ??
             ev?.target?.value ??
             ev?.target?.selected?.value ??
@@ -2388,6 +2617,15 @@ let SkyCookerHaCardEditor = class SkyCookerHaCardEditor extends s {
             icon: ev.target.value,
         })}"
             ></ha-textfield>
+
+            <ha-formfield .label=${this._t('new_design')}>
+              <ha-switch
+                .checked=${this._config.new_design ?? false}
+                @change=${(ev) => this._updateConfig({
+            new_design: ev.target.checked,
+        })}
+              ></ha-switch>
+            </ha-formfield>
           </div>
 
           <div class="grid">

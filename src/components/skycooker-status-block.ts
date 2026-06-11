@@ -7,11 +7,13 @@ import {
   shouldShowAutoWarmTime,
   shouldShowDelayedLaunchTime,
 } from '../status-utils';
+import type { CardDesign } from './skycooker-header';
 
 export function renderSkyCookerStatusBlock(
   config: SkycookerConfig,
   hass: HomeAssistant | undefined,
-  t: (key: string) => string
+  t: (key: string) => string,
+  design: CardDesign = 'classic'
 ): TemplateResult {
   const temperatureEntity =
     config.cooking_temperature_entity || config.temperature_entity;
@@ -56,11 +58,22 @@ export function renderSkyCookerStatusBlock(
     soundEnabledRaw === 'true' ||
     soundEnabledRaw === 'True';
 
+  const groupClass =
+    design === 'modern'
+      ? 'new-control-group modern-metrics-panel'
+      : 'new-control-group';
+  const sensorsClass =
+    design === 'modern'
+      ? 'new-time-sensors-container modern-metrics-grid'
+      : 'new-time-sensors-container';
+  const itemClass =
+    design === 'modern' ? 'new-control-item modern-metric' : 'new-control-item';
+
   return html`
-    <div class="new-control-group">
+    <div class="${groupClass}">
       ${showTemp && temperatureEntity
         ? html`
-            <div class="new-control-item">
+            <div class="${itemClass} modern-metric-featured">
               <ha-icon icon="mdi:thermometer" class="new-control-icon"></ha-icon>
               <div class="new-control-content">
                 <div class="new-control-label">${t('temperature')}</div>
@@ -71,9 +84,9 @@ export function renderSkyCookerStatusBlock(
             </div>
           `
         : ''}
-      <div class="new-time-sensors-container">
+      <div class="${sensorsClass}">
         <div class="new-time-sensors-row">
-          <div class="new-control-item">
+          <div class="${itemClass}">
             <div class="new-control-label">${t('remaining')}</div>
             <div class="new-control-icon-value">
               <ha-icon icon="mdi:timer" class="new-control-icon"></ha-icon>
@@ -82,7 +95,7 @@ export function renderSkyCookerStatusBlock(
               </div>
             </div>
           </div>
-          <div class="new-control-item">
+          <div class="${itemClass}">
             <div class="new-control-label">${t('cooking_time_label')}</div>
             <div class="new-control-icon-value">
               <ha-icon icon="mdi:clock" class="new-control-icon"></ha-icon>
@@ -95,7 +108,7 @@ export function renderSkyCookerStatusBlock(
         <div class="new-time-sensors-row">
           ${showAutoWarmTime && config.auto_warm_time_entity
             ? html`
-                <div class="new-control-item">
+                <div class="${itemClass}">
                   <div class="new-control-label">${t('auto_warm_time')}</div>
                   <div class="new-control-icon-value">
                     <ha-icon
@@ -111,7 +124,7 @@ export function renderSkyCookerStatusBlock(
             : ''}
           ${showDelayedLaunchTime && config.delayed_launch_time_entity
             ? html`
-                <div class="new-control-item">
+                <div class="${itemClass}">
                   <div class="new-control-label">${t('delayed_launch')}</div>
                   <div class="new-control-icon-value">
                     <ha-icon
@@ -131,7 +144,7 @@ export function renderSkyCookerStatusBlock(
               <div class="new-time-sensors-row">
                 ${hasSuccessRate
                   ? html`
-                      <div class="new-control-item">
+                      <div class="${itemClass}">
                         <div class="new-control-label">
                           ${t('success_rate')}
                         </div>
@@ -149,7 +162,7 @@ export function renderSkyCookerStatusBlock(
                   : ''}
                 ${hasErrorCode
                   ? html`
-                      <div class="new-control-item">
+                      <div class="${itemClass}">
                         <div class="new-control-label">${t('error_code')}</div>
                         <div class="new-control-icon-value">
                           <ha-icon
@@ -165,7 +178,7 @@ export function renderSkyCookerStatusBlock(
                   : ''}
                 ${hasSoundEnabled
                   ? html`
-                      <div class="new-control-item">
+                      <div class="${itemClass}">
                         <div class="new-control-label">
                           ${t('sound_enabled')}
                         </div>

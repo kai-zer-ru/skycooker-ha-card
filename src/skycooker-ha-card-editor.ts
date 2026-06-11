@@ -293,6 +293,16 @@ export class SkyCookerHaCardEditor extends LitElement implements LovelaceCardEdi
                   icon: (ev.target as HTMLInputElement).value,
                 })}"
             ></ha-textfield>
+
+            <ha-formfield .label=${this._t('new_design')}>
+              <ha-switch
+                .checked=${this._config.new_design ?? false}
+                @change=${(ev: Event) =>
+                  this._updateConfig({
+                    new_design: (ev.target as HTMLInputElement).checked,
+                  })}
+              ></ha-switch>
+            </ha-formfield>
           </div>
 
           <div class="grid">

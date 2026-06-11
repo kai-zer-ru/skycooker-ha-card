@@ -7,6 +7,7 @@ import {
   hasFavoriteModes,
   getSelectOptions,
 } from '../entity-utils';
+import type { CardDesign } from './skycooker-header';
 
 export interface ModeSelectorParams {
   config: SkycookerConfig;
@@ -15,6 +16,8 @@ export interface ModeSelectorParams {
   getSelectedTime: () => string;
   /** When false, hide the "current_mode | status" line (used in new design). Default true. */
   showCurrentStatusLine?: boolean;
+  design?: CardDesign;
+  onSelectChange?: (entityId: string, ev: Event) => void;
 }
 
 export function renderSkyCookerModeSelector(params: ModeSelectorParams): TemplateResult {
@@ -24,14 +27,25 @@ export function renderSkyCookerModeSelector(params: ModeSelectorParams): Templat
     t,
     getSelectedTime,
     showCurrentStatusLine = true,
+    design = 'classic',
   } = params;
 
   const getEntityStateLocal = (entityId: string | undefined) =>
     entityId ? getEntityState(hass, entityId) : '';
 
+  const groupClass =
+    design === 'modern'
+      ? 'new-control-group modern-program-panel'
+      : 'new-control-group';
+  const selectorClass =
+    design === 'modern' ? 'new-mode-selector modern-mode-selector' : 'new-mode-selector';
+  const summaryClass =
+    design === 'modern' ? 'modern-selection-summary' : 'classic-selection-summary';
+
   return html`
-    <div class="new-control-group">
-      <div class="new-mode-selector">
+    <div class="${groupClass}">
+      <div class="${selectorClass}">
+        <div class="${summaryClass}">
         ${showCurrentStatusLine
           ? html`
               <div class="new-mode-label" style="text-align: center;">
@@ -49,7 +63,9 @@ export function renderSkyCookerModeSelector(params: ModeSelectorParams): Templat
             </div>`
           : ''}
         <div class="new-selected-time">
-          ${t('selected_time')}: <span class="selected-time-text">${getSelectedTime() || '-----'}</span>
+          ${t('selected_time')}:
+          <span class="selected-time-text">${getSelectedTime() || '-----'}</span>
+        </div>
         </div>
 
         ${config.favorite_modes_entity &&
@@ -64,16 +80,7 @@ export function renderSkyCookerModeSelector(params: ModeSelectorParams): Templat
                   style="width: 100%;"
                   .value=${getEntityStateLocal(config.mode_entity)}
                   @selected=${(ev: CustomEvent) => {
-                    // eslint-disable-next-line no-console
-                    console.log('[SkyCooker Card] favorite select @selected', {
-                      entityId: config.mode_entity,
-                      detail: (ev as any).detail,
-                      targetValue: (ev.target as any)?.value,
-                    });
-                    (params as any).onSelectChange?.(
-                      config.mode_entity,
-                      ev
-                    );
+                    params.onSelectChange?.(config.mode_entity, ev);
                   }}
                   @closed=${(ev: Event) => ev.stopPropagation()}
                 >
@@ -96,13 +103,7 @@ export function renderSkyCookerModeSelector(params: ModeSelectorParams): Templat
                   style="width: 100%;"
                   .value=${getEntityStateLocal(config.mode_entity)}
                   @selected=${(ev: CustomEvent) => {
-                    // eslint-disable-next-line no-console
-                    console.log('[SkyCooker Card] mode select @selected', {
-                      entityId: config.mode_entity,
-                      detail: (ev as any).detail,
-                      targetValue: (ev.target as any)?.value,
-                    });
-                    (params as any).onSelectChange?.(config.mode_entity, ev);
+                    params.onSelectChange?.(config.mode_entity, ev);
                   }}
                   @closed=${(ev: Event) => ev.stopPropagation()}
                 >
