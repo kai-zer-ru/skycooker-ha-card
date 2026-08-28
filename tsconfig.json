@@ -8,6 +8,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false,
     "outDir": "dist",
     "rootDir": "src"
   },

@@ -1,7 +1,6 @@
 .roo
 alarmo-card
 node_modules
-package-lock.json
 *.log
 *.tmp
 *.bak
@@ -11,3 +10,7 @@ package-lock.json
 .idea
 .vscode
 dist/skycooker-card.js
+
+# CI / act
+.artifacts/
+.release-notes.md

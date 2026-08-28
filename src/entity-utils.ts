@@ -1,5 +1,6 @@
 import { html, type TemplateResult } from 'lit';
 import type { HomeAssistant } from './types';
+import type { SkycookerEntityConfig, SkycookerEntityConfigKey } from './config';
 
 const STANDBY_OPTIONS = [
   'unknown',
@@ -268,7 +269,7 @@ export function getFavoriteModesAsSelectOptions(
 const ENTITY_SUFFIX_TO_CONFIG_KEY: Array<{
   domain: string;
   suffix: string;
-  configKey: keyof import('./config').SkycookerConfig;
+  configKey: SkycookerEntityConfigKey;
 }> = [
   // Сенсоры (английские суффиксы + русская транслитерация)
   { domain: 'sensor', suffix: 'status', configKey: 'status_entity' },
@@ -388,11 +389,10 @@ const ENTITY_SUFFIX_TO_CONFIG_KEY: Array<{
 export async function autoFillEntitiesByDevice(
   hass: HomeAssistant | undefined,
   seedEntityId: string
-): Promise<Partial<Record<keyof import('./config').SkycookerConfig, string>>> {
+): Promise<SkycookerEntityConfig> {
   if (!hass || !seedEntityId) return {};
 
-  const result: Partial<Record<keyof import('./config').SkycookerConfig, string>> =
-    {};
+  const result: SkycookerEntityConfig = {};
 
   const callWS = (hass as any).callWS?.bind(hass);
 

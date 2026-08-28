@@ -33,7 +33,12 @@ export interface SkycookerConfig {
   favorite_modes_entity: string;
 }
 
-export const CONFIG_ENTITY_KEYS: (keyof SkycookerConfig)[] = [
+export type SkycookerEntityConfigKey = (typeof CONFIG_ENTITY_KEYS)[number];
+export type SkycookerEntityConfig = Partial<
+  Pick<SkycookerConfig, SkycookerEntityConfigKey>
+>;
+
+export const CONFIG_ENTITY_KEYS = [
   'mode_entity',
   'additional_mode_entity',
   'cooking_time_hours_entity',
@@ -57,7 +62,7 @@ export const CONFIG_ENTITY_KEYS: (keyof SkycookerConfig)[] = [
   'auto_warm_time_entity',
   'delayed_launch_time_entity',
   'favorite_modes_entity',
-];
+] as const;
 
 export const DEFAULT_CONFIG: SkycookerConfig = {
   type: 'custom:skycooker-ha-card',

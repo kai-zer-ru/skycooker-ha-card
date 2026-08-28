@@ -1,0 +1,41 @@
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Build
+        run: make ci
+
+      - name: Verify committed bundle
+        run: git diff --exit-code -- dist/skycooker-ha-card.js
+
+      - name: Prepare release notes
+        run: |
+          chmod +x scripts/extract-release-notes.sh
+          scripts/extract-release-notes.sh --stdout "${GITHUB_REF_NAME}" > .release-notes.md
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          body_path: .release-notes.md
+          files: dist/skycooker-ha-card.js
+          generate_release_notes: false

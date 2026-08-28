@@ -12,6 +12,8 @@ const STATUS_ACTIVE = [
   'Auto Warm',
   'Ожидание',
   'Waiting',
+  'Ожидание загрузки продуктов',
+  'Waiting for ingredients',
 ];
 
 const STATUS_OFF = [

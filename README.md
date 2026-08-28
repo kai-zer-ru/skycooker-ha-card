@@ -44,15 +44,23 @@
 Карточка поддерживает отображение и установку температуры приготовления. Температура может быть установлена с помощью сущности `cooking_temperature_entity`, что позволяет точно настроить процесс приготовления.
 
 ### Контроль состояния
-Отображает текущую температуру, оставшееся время, общее время и статус приготовления. Статус может быть одним из следующих:
-- Разогрев
-- Готовка
-- Подогрев
-- Отложенный старт
-- Ожидание
+Компактный блок состояния показывает ключевые параметры устройства, когда мультиварка включена (не в режиме «Выключена» / «Off»). Отображает текущую температуру, оставшееся и общее время, статус приготовления и при необходимости — диагностику.
 
-### Прогресс приготовления
-Визуальное отображение прогресса приготовления в виде прогресс-бара. Прогресс-бар автоматически скрывается для неактивных статусов и отображается только для статусов "Разогрев" и "Готовка".
+Возможные значения статуса (RU / EN):
+- Разогрев / Warming
+- Готовка / Cooking
+- Подогрев / Auto Warm
+- Отложенный старт / Delayed Launch
+- Ожидание / Waiting
+- Ожидание загрузки продуктов / Waiting for ingredients
+
+Для активных статусов (включая «Ожидание загрузки продуктов») показываются температура и таймеры, если соответствующие сущности настроены.
+
+### Диагностика устройства
+При наличии сущностей из интеграции SkyCooker в блоке состояния могут отображаться:
+- **Процент успешных команд** (`success_rate_entity`) — надёжность связи с устройством
+- **Код ошибки** (`error_code_entity`) — код последней ошибки (скрывается, если `0`)
+- **Звук** (`sound_enabled_entity`) — включён ли звук на мультиварке
 
 ### Многоязычный интерфейс
 Карточка поддерживает русский и английский языки. Язык интерфейса автоматически определяется из настроек Home Assistant.
@@ -77,6 +85,21 @@
 - **Сенсоры времени**: отображение времени отложенного старта и автоподогрева
 - **Подписи в селектах**: улучшенная доступность и понятность интерфейса
 - **Красивые селекты времени**: закругленные углы, компактный размер, тени и плавные переходы для всех селектов
+- **Сервисы интеграции**: кнопки «Старт» и «Стоп» вызывают `skycooker.start_cooking` и `skycooker.stop_cooking` с учётом отложенного старта
+
+## Визуальный редактор
+
+В редакторе карточки (раздел **Сущности**):
+
+1. **Экземпляр SkyCooker** — выбор устройства из реестра Home Assistant; после выбора сущности заполняются автоматически.
+2. **Автозаполнить по устройству** — подставляет все известные сущности интеграции по `device_id` (с запасным поиском по префиксу `object_id`).
+3. **Новый дизайн** — переключатель оформления карточки.
+4. Списки сущностей фильтруются по шаблону `skycooker_*`; выпадающие списки используют элементы `ha-dropdown-item`.
+
+## Требования
+
+- **Home Assistant 2026.6 или новее**
+- Установленная [интеграция SkyCooker](https://github.com/kai-zer-ru/skycooker-ha) (те же требования к версии HA)
 
 ## Установка
 
@@ -138,6 +161,9 @@ cooking_temperature_entity: select.skycooker_cooking_temperature
 remaining_time_entity: sensor.skycooker_remaining_time
 cooking_time_entity: sensor.skycooker_cooking_time
 status_entity: sensor.skycooker_status
+success_rate_entity: sensor.skycooker_success_rate
+error_code_entity: sensor.skycooker_error_code
+sound_enabled_entity: sensor.skycooker_sound_enabled
 current_mode_entity: sensor.skycooker_current_mode
 current_additional_mode_entity: sensor.skycooker_current_additional_mode
 auto_warm_time_entity: sensor.skycooker_auto_warm_time
@@ -168,7 +194,10 @@ favorite_modes_entity: select.skycooker_favorite_modes
 | cooking_temperature_entity | string | Нет | Сущность для выбора температуры приготовления. Позволяет установить желаемую температуру для приготовления. Эта сущность используется для точной настройки температуры в режимах, где это возможно. |
 | remaining_time_entity | string | Нет | Сущность для отображения оставшегося времени приготовления. Показывает, сколько времени осталось до завершения процесса. |
 | cooking_time_entity | string | Нет | Сущность для отображения общего времени приготовления. Показывает общее время, установленное для приготовления. |
-| status_entity | string | Нет | Сущность для отображения текущего статуса мультиварки. Может принимать значения, такие как "Разогрев", "Готовка", "Подогрев", "Отложенный старт" и другие. |
+| status_entity | string | Нет | Сущность текущего статуса мультиварки (см. список значений в разделе «Контроль состояния»). |
+| success_rate_entity | string | Нет | Сенсор процента успешных команд (`success_rate`). |
+| error_code_entity | string | Нет | Сенсор кода ошибки устройства (`error_code`). |
+| sound_enabled_entity | string | Нет | Сенсор состояния звука мультиварки (`sound_enabled`). |
 | current_mode_entity | string | Нет | Сущность для отображения текущего режима приготовления. Показывает, какой режим в данный момент активен. |
 | current_additional_mode_entity | string | Нет | Сущность для отображения текущего дополнительного режима. Показывает дополнительные настройки текущего режима. |
 | auto_warm_time_entity | string | Нет | Сущность для отображения времени автоподогрева. Показывает, сколько времени осталось до завершения автоподогрева. |
@@ -216,8 +245,11 @@ icon: mdi:stove
 new_design: false
 temperature_entity: sensor.skycooker_temperature
 remaining_time_entity: sensor.skycooker_remaining_time
-total_time_entity: sensor.skycooker_total_time
+cooking_time_entity: sensor.skycooker_cooking_time
 status_entity: sensor.skycooker_status
+success_rate_entity: sensor.skycooker_success_rate
+error_code_entity: sensor.skycooker_error_code
+sound_enabled_entity: sensor.skycooker_sound_enabled
 current_mode_entity: sensor.skycooker_current_mode
 mode_entity: select.skycooker_mode
 additional_mode_entity: select.skycooker_additional_mode
@@ -290,38 +322,24 @@ favorite_modes_entity: select.skycooker_favorite_modes
 
 Это сообщение появляется, если ни одна сущность не указана в конфигурации. Добавьте хотя бы одну сущность для отображения состояния.
 
-### Проблемы с выбором режимов
+### Проблемы с выбором программ
 
-Если режимы не выбираются или не отображаются правильно:
+Если программы не выбираются или не отображаются:
 
-1. Откройте консоль браузера (F12 > Console)
-2. Проверьте логи, которые начинаются с:
-   - "Setting config:" - информация о конфигурации
-   - "Mode buttons - Entity ID:" - информация о доступных режимах
-   - "Has "На пару" option:" - наличие конкретного режима
-   - "Setting mode:" - вызов сервиса для установки режима
-3. Убедитесь, что:
-   - Сущность `mode_entity` правильно указана в конфигурации
-   - Опция "На пару" присутствует в атрибутах сущности `mode_entity`
-   - Опция "На пару" не фильтруется (не входит в список: 'Нет', 'Режим ожидания', 'None', 'Standby Mode')
-   - Сервис `select.select_option` вызывается с правильными параметрами
+1. Убедитесь, что `mode_entity` и `favorite_modes_entity` (если используется) указаны верно.
+2. Проверьте, что у select-сущностей в атрибутах есть список опций (`options`, `values` и т.п.).
+3. Откройте консоль браузера (F12 → Console) и проверьте ошибки JavaScript.
+4. В редакторе карточки используйте **Экземпляр SkyCooker** или **Автозаполнить по устройству**, чтобы подставить корректные entity_id.
 
-### Диагностика через логи
+### Карточка не реагирует на «Старт» / «Стоп»
 
-Карточка выводит подробные логи в консоль браузера для диагностики проблем:
-
-- Информация о конфигурации при её установке
-- Список всех доступных опций для сущности режима
-- Наличие опции "На пару" до и после фильтрации
-- Параметры вызова сервиса select.select_option при нажатии на кнопку режима
-
-Для просмотра логов откройте консоль браузера (F12 > Console) и выполните действия, которые вызывают проблему.
+Кнопки вызывают сервисы интеграции `skycooker.start_cooking` и `skycooker.stop_cooking`. Убедитесь, что интеграция [SkyCooker](https://github.com/kai-zer-ru/skycooker-ha) установлена и сущности `start_entity` / `stop_entity` относятся к вашему устройству.
 
 ## Разработка
 
 ### Требования
 
-- Node.js версии 18 или выше
+- Node.js 18.18 или выше (см. `.nvmrc`)
 - npm или yarn
 
 ### Установка зависимостей
@@ -330,10 +348,20 @@ favorite_modes_entity: select.skycooker_favorite_modes
 npm install
 ```
 
-### Сборка проекта
+### Сборка и проверки
 
 ```bash
-npm run build
+npm run build          # только сборка
+make ci                # lint, typecheck, build (как в CI)
+make version vX.Y.Z    # синхронизировать VERSION, package.json, CARD_VERSION
+make tag-release       # сборка, git-тег vX.Y.Z и push (чистое дерево)
+```
+
+Локальный прогон GitHub Actions (нужен [act](https://github.com/nektos/act)):
+
+```bash
+make act-push          # workflow ci.yml
+make act-release       # workflow release.yml (нужен GITHUB_TOKEN)
 ```
 
 ### Разработка с автоматической перезагрузкой
@@ -344,12 +372,15 @@ npm run dev
 
 ### Структура проекта
 
-- `src/skycooker-ha-card.ts` - основной файл карточки
-- `src/skycooker-ha-card-editor.ts` - редактор конфигурации
-- `src/localize.ts` - локализация
-- `src/const.ts` - константы (версия карточки)
-- `src/translations/` - файлы переводов
-- `dist/skycooker-ha-card.js` - собранный файл (результат)
+- `src/skycooker-ha-card.ts` — основной файл карточки
+- `src/skycooker-ha-card-editor.ts` — редактор конфигурации
+- `src/components/` — UI-компоненты (заголовок, статус, кнопки, селектор программ, доп. настройки)
+- `src/config.ts`, `src/entity-utils.ts`, `src/status-utils.ts` — конфигурация и утилиты
+- `src/localize.ts` — локализация
+- `src/const.ts` — константы (версия карточки)
+- `src/translations/` — файлы переводов
+- `dist/skycooker-ha-card.js` — собранный файл (результат)
+- `Makefile`, `.github/workflows/` — CI и релиз
 
 ## Локализация
 

@@ -328,7 +328,7 @@ function getLanguage(config, hass) {
 
 // Константы для skycooker-ha-card
 // Keep in sync with package.json version
-const CARD_VERSION = "1.3.0";
+const CARD_VERSION = "1.4.1";
 /** Опция «Другое» в селекте избранного: только отображение, не передаём в select entity. В sync с интеграцией (favorites_other). */
 const FAVORITES_OTHER_OPTIONS = ["Другое", "Other"];
 
@@ -787,6 +787,8 @@ const STATUS_ACTIVE = [
     'Auto Warm',
     'Ожидание',
     'Waiting',
+    'Ожидание загрузки продуктов',
+    'Waiting for ingredients',
 ];
 const STATUS_OFF = [
     'Выключена',
